@@ -1,0 +1,6 @@
+<svg viewBox="0 0 240 220" xmlns="http://www.w3.org/2000/svg">
+  <!-- Simplified for small sizes — no hairlines, thicker strokes -->
+  <circle cx="120" cy="56" r="34" fill="#B8915A"/>
+  <circle cx="60" cy="160" r="34" fill="none" stroke="#B8915A" stroke-width="10"/>
+  <circle cx="180" cy="160" r="34" fill="#8C6A3F"/>
+</svg>

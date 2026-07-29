@@ -1,0 +1,44 @@
+{
+  "name": "@asseris/claude-usage-dashboard",
+  "version": "1.9.0",
+  "description": "Local, read-only analytics dashboard for Claude Code usage and compatible cache telemetry.",
+  "license": "Apache-2.0",
+  "author": "Asseris",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ASSERIS-ASI/claude-usage-dashboard.git"
+  },
+  "homepage": "https://github.com/ASSERIS-ASI/claude-usage-dashboard",
+  "bugs": {
+    "url": "https://github.com/ASSERIS-ASI/claude-usage-dashboard/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "dashboard.js",
+  "bin": {
+    "claude-usage-dashboard": "dashboard.js"
+  },
+  "files": [
+    "apps",
+    "public/css",
+    "public/js",
+    "public/img/*.svg",
+    "public/release-history.json",
+    "tpl",
+    "dashboard.js",
+    "VERSION",
+    "CHANGELOG.md",
+    "release-notes",
+    "product-manifest.json",
+    "NOTICE",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "scripts": {
+    "start": "node dashboard.js",
+    "check": "node scripts/check-version.js && node scripts/check-public-boundary.js && node scripts/check-module-graph.js && node scripts/check-syntax.js",
+    "test": "node --test test/unit/*.test.js",
+    "smoke": "node scripts/smoke-test.js",
+    "ci": "npm run check && npm test && npm run smoke"
+  }
+}

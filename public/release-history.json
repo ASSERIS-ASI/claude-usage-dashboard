@@ -1,0 +1,128 @@
+[
+  {
+    "tag_name": "v1.9.0",
+    "published_at": "2026-07-29T00:00:00Z",
+    "name": "v1.9.0 — Standalone public dashboard",
+    "body": "## Highlights\n\n- Standalone, local and read-only dashboard maintained by Asseris.\n- Claude JSONL, compatible request NDJSON, Cache-Fix and MeterRow v1 adapters.\n- Cost Forensic, multilingual setup and configurable page templates.\n- Explicit public product boundary, version checks, tests and release mirroring.\n\nThe public package contains no proxy runtime, request rewriting, TLS interception, session serializer, remote sync or account control plane."
+  },
+  {
+    "tag_name": "v1.8.3",
+    "published_at": "2026-04-15T00:00:00Z",
+    "name": "v1.8.3 — UX and performance",
+    "body": "Published predecessor release: UX and performance fixes plus Claude Desktop session-log discovery."
+  },
+  {
+    "tag_name": "v1.8.2",
+    "published_at": "2026-04-14T00:00:00Z",
+    "name": "v1.8.2 — Empty-data guards",
+    "body": "Published predecessor release: chart guards for missing JSONL or telemetry data."
+  },
+  {
+    "tag_name": "v1.8.1",
+    "published_at": "2026-04-14T00:00:00Z",
+    "name": "v1.8.1 — Widget dispatcher",
+    "body": "Published predecessor release: widget-dispatcher work, pricing corrections and Cache-Fix documentation."
+  },
+  {
+    "tag_name": "v1.8.0",
+    "published_at": "2026-04-13T00:00:00Z",
+    "name": "v1.8.0 — Widget system and ECharts migration",
+    "body": "Published predecessor release: configurable widget grid, templates, ECharts migration and session-analysis improvements."
+  },
+  {
+    "tag_name": "v1.7.0",
+    "published_at": "2026-04-13T00:00:00Z",
+    "name": "v1.7.0 — Community baseline",
+    "body": "Published predecessor release: Apache-2.0 licensing and community project files."
+  },
+  {
+    "tag_name": "v1.6.0",
+    "published_at": "2026-04-11T00:00:00Z",
+    "name": "v1.6.0 — Quota and overpayment visualization",
+    "body": "Published predecessor release: quota-divisor analysis, daily session impact and visible-token comparison."
+  },
+  {
+    "tag_name": "v1.5.0",
+    "published_at": "2026-04-11T00:00:00Z",
+    "name": "v1.5.0 — Code quality",
+    "body": "Published predecessor release: code-quality fixes for economic charts."
+  },
+  {
+    "tag_name": "v1.4.0",
+    "published_at": "2026-04-11T00:00:00Z",
+    "name": "v1.4.0 — Budget Drain, Burn Zone and Cache Health",
+    "body": "Published predecessor release: daily session impact, cumulative usage and cache-health visualizations."
+  },
+  {
+    "tag_name": "v1.3.7",
+    "published_at": "2026-04-11T00:00:00Z",
+    "name": "v1.3.7 — Maintenance",
+    "body": "Published predecessor maintenance release."
+  },
+  {
+    "tag_name": "v1.3.6",
+    "published_at": "2026-04-11T00:00:00Z",
+    "name": "v1.3.6 — Minor fixes",
+    "body": "Published predecessor patch release with minor fixes."
+  },
+  {
+    "tag_name": "v1.3.5",
+    "published_at": "2026-04-11T00:00:00Z",
+    "name": "v1.3.5 — Economic-chart fixes",
+    "body": "Published predecessor patch release: economic-chart rerender and session-change fixes."
+  },
+  {
+    "tag_name": "v1.3.4",
+    "published_at": "2026-04-10T00:00:00Z",
+    "name": "v1.3.4 — Documentation and CI",
+    "body": "Published predecessor release: English and Korean documentation parity plus CI fixes."
+  },
+  {
+    "tag_name": "v1.3.3",
+    "published_at": "2026-04-10T00:00:00Z",
+    "name": "v1.3.3 — Economic-section UI fixes",
+    "body": "Published predecessor patch release with visual fixes for Economic Usage."
+  },
+  {
+    "tag_name": "v1.3.2",
+    "published_at": "2026-04-10T00:00:00Z",
+    "name": "v1.3.2 — Code quality and release tooling",
+    "body": "Published predecessor patch release: code cleanup and public release-note filtering."
+  },
+  {
+    "tag_name": "v1.3.1",
+    "published_at": "2026-04-10T00:00:00Z",
+    "name": "v1.3.1 — Static-analysis cleanup",
+    "body": "Published predecessor patch release addressing static-analysis findings."
+  },
+  {
+    "tag_name": "v1.3.0",
+    "published_at": "2026-04-10T00:00:00Z",
+    "name": "v1.3.0 — Cache Explosion and Economic Usage",
+    "body": "Published predecessor release introducing economic and cache-growth visualizations."
+  },
+  {
+    "tag_name": "v1.2.0",
+    "published_at": "2026-04-09T00:00:00Z",
+    "name": "v1.2.0 — ECharts proof of concept",
+    "body": "Published predecessor release: ECharts proof of concept, quota metrics and data-format documentation."
+  },
+  {
+    "tag_name": "v1.1.0",
+    "published_at": "2026-04-08T00:00:00Z",
+    "name": "v1.1.0 — Multi-day trends and Korean UI",
+    "body": "Published predecessor release with multi-day analytics and Korean localization."
+  },
+  {
+    "tag_name": "v1.0.1",
+    "published_at": "2026-04-08T00:00:00Z",
+    "name": "v1.0.1 — UI and release information",
+    "body": "Published predecessor patch release: UI fixes, release information and quality gate."
+  },
+  {
+    "tag_name": "v1.0.0",
+    "published_at": "2026-04-07T00:00:00Z",
+    "name": "v1.0.0 — Claude Usage Dashboard",
+    "body": "First stable predecessor release of the Claude Usage Dashboard."
+  }
+]

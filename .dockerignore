@@ -1,0 +1,10 @@
+.git
+.github
+.gitea
+node_modules
+coverage
+state
+tmp
+*.log
+*.jsonl
+*.ndjson

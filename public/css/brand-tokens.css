@@ -1,0 +1,49 @@
+/*
+@asseris-module       Brand Tokens
+@asseris-description  Auto-annotated module metadata for public/css/brand-tokens.css.
+@asseris-pillar       actuator
+@asseris-domain       dashboard-ui
+@asseris-stage        output
+*/
+/* =================================================================
+   ASSERIS — Brand Tokens
+   Calculus mark · v1.0
+   Copy these directly into your stylesheet, Tailwind config,
+   or design system tokens.
+   ================================================================= */
+
+:root {
+  /* ---- Brand colors ---- */
+  --asseris-gold-light:   #D4AF7F;  /* Highlights, hover states, dark-mode wordmark */
+  --asseris-gold:         #B8915A;  /* Primary brand gold (verum stone) */
+  --asseris-gold-deep:    #8C6A3F;  /* Falsum stone, deep accents, light-mode wordmark */
+  --asseris-gold-soft:    #A0875E;  /* Tagline italic, secondary text */
+
+  --asseris-ink:          #0E1116;  /* Primary text, dark backgrounds */
+  --asseris-ink-soft:     #2A2D34;  /* Secondary text on light */
+
+  --asseris-paper:        #F7F3EC;  /* Primary background (light mode) */
+  --asseris-paper-warm:   #EFE7D6;  /* Cards, panels, secondary surfaces */
+  --asseris-line:         #E6DFD0;  /* Borders, dividers */
+
+  /* ---- Dark mode surfaces ---- */
+  --asseris-dark-bg:      #0E1116;  /* Darkest background */
+  --asseris-dark-card:    #1A1D24;  /* Card/container bg */
+  --asseris-dark-border:  #2A2D34;  /* Medium borders */
+  --asseris-dark-border-l:#3D3830;  /* Light borders */
+
+  /* ---- Typography ---- */
+  --asseris-font-display: "Cinzel", "Trajan Pro", Optima, Georgia, serif;
+  --asseris-font-serif:   Optima, Georgia, serif;
+  --asseris-font-body:    Inter, system-ui, -apple-system, sans-serif;
+  --asseris-font-mono:    "SFMono-Regular", Consolas, monospace;
+
+  /* Wordmark settings */
+  --asseris-wordmark-tracking: 0.42em;   /* letter-spacing for ASSERIS */
+  --asseris-tagline-tracking:  0.28em;   /* letter-spacing for tagline */
+
+  /* ---- Spacing & radius ---- */
+  --asseris-radius-sm:  6px;
+  --asseris-radius-md:  12px;
+  --asseris-radius-lg:  18px;
+}

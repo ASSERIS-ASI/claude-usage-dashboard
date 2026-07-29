@@ -1,0 +1,70 @@
+<!--
+@asseris-module       Cost Intelligence Section
+@asseris-description  Auto-annotated module metadata for tpl/sections/cost-intelligence-section.html.
+@asseris-pillar       actuator
+@asseris-domain       dashboard-ui
+@asseris-stage        output
+-->
+<section class="cf-page" id="cost-intelligence-collapse" data-span="12">
+
+<!-- Hero-Strip: 3 Zellen -->
+<div class="cf-hero" id="cf-hero-strip">
+  <div class="cf-hero-cell" id="cf-hero-spent">
+    <div class="cf-hero-label" id="cf-hero-spent-label">Verbraucht heute</div>
+    <div class="cf-hero-value" id="cf-hero-spent-value">&mdash;</div>
+    <div class="cf-hero-meta" id="cf-hero-spent-meta"></div>
+  </div>
+  <div class="cf-hero-cell" id="cf-hero-delta">
+    <div class="cf-hero-label" id="cf-hero-delta-label">Unaccounted / Delta</div>
+    <div class="cf-hero-value" id="cf-hero-delta-value">&mdash;</div>
+    <div class="cf-hero-meta" id="cf-hero-delta-meta"></div>
+  </div>
+  <div class="cf-hero-cell" id="cf-hero-forecast">
+    <div class="cf-hero-label" id="cf-hero-forecast-label">Forecast Reset</div>
+    <div class="cf-hero-value" id="cf-hero-forecast-value">&mdash;</div>
+    <div class="cf-hero-meta" id="cf-hero-forecast-meta"></div>
+  </div>
+</div>
+
+<!-- Sektion I: Vendor-Reconciliation -->
+<div class="cf-section" id="cf-reconciliation-section">
+  <h3 class="cf-section-title" id="cf-recon-title">Vendor-Reconciliation</h3>
+  <div id="cf-reconciliation"></div>
+</div>
+
+<!-- Sektion II: Counter-Factual -->
+<div class="cf-section" id="cf-counterfactual-section">
+  <h3 class="cf-section-title" id="cf-counter-title">Counter-Factual</h3>
+  <div id="cf-counterfactual"></div>
+</div>
+
+<!-- Cost Fever: real usage cost over time + aligned session M(t) lanes -->
+<div class="cf-section" id="cf-cost-fever-section">
+  <div class="cf-section-head">
+    <div>
+      <h3 class="cf-section-title" id="cf-cost-fever-title">Cost Fever — Session Concurrency &amp; M(t)</h3>
+      <div class="cf-section-subtitle" id="cf-cost-fever-subtitle"></div>
+    </div>
+    <div class="cf-fever-controls">
+      <button type="button" class="cf-mode-btn active" id="cf-fever-live">Live</button>
+      <button type="button" class="cf-mode-btn" id="cf-fever-history">Historie</button>
+      <select id="cf-fever-date" class="cf-date-select" aria-label="Cost Fever date"></select>
+    </div>
+  </div>
+  <div id="cf-cost-fever-kpis" class="cf-fever-kpis"></div>
+  <div id="c-cf-cost-fever" class="cf-fever-chart"></div>
+</div>
+
+<!-- Sektion III: Two-Column -->
+<div class="cf-two-col">
+  <div class="cf-section" id="cf-top5-section">
+    <h3 class="cf-section-title" id="cf-top5-title">Top 5 Sessions</h3>
+    <div id="cf-top5-sessions"></div>
+  </div>
+  <div class="cf-section" id="cf-decomp-section">
+    <h3 class="cf-section-title" id="cf-decomp-title">Token-Decomposition</h3>
+    <div id="cf-token-decomposition"></div>
+  </div>
+</div>
+
+</section>
