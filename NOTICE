@@ -1,5 +1,5 @@
 Claude Usage Dashboard
-Copyright 2026 Asseris and contributors
+Copyright 2026 ASSERIS AISBL and contributors
 
 This product is an Asseris-maintained continuation of the Claude Usage
 Dashboard originally developed by Falk Großwig. Original and subsequent
@@ -9,3 +9,7 @@ Interoperability adapters support data formats produced by
 cnighswonger/claude-code-cache-fix and cnighswonger/claude-code-meter.
 Those projects are separately licensed; see THIRD_PARTY_NOTICES.md and
 THIRD_PARTY_LICENSES.
+
+ASSERIS, the ASSERIS wordmark, the three-node ASSERIS logo and related brand
+assets are registered trademarks of ASSERIS AISBL. The Apache License does not
+grant permission to use these marks. See TRADEMARKS.md.

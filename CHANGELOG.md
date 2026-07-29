@@ -5,6 +5,15 @@ documented here.
 
 ## Unreleased
 
+## [1.10.0] - 2026-07-30
+
+### Added
+
+- Added release-gated GHCR publishing with immutable source-SHA tags, OCI
+  provenance, an SBOM and stable semantic-version aliases.
+- Added an explicit ASSERIS AISBL trademark notice covering every logo asset in
+  `public/img`.
+
 ### Security
 
 - Restricted browser API requests to the dashboard origin and removed wildcard
@@ -97,4 +106,5 @@ Those historical tags remain attached to the
 They are deliberately not retargeted to the continuation repository. The
 predecessor `v1.8.4` entry was a draft rather than a published release.
 
+[1.10.0]: https://github.com/ASSERIS-ASI/claude-usage-dashboard/releases/tag/v1.10.0
 [1.9.0]: https://github.com/ASSERIS-ASI/claude-usage-dashboard/releases/tag/v1.9.0

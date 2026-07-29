@@ -56,6 +56,27 @@ The server binds to `127.0.0.1` by default. Derived state is stored in
 
 ## Docker
 
+Verified public snapshots are published as
+`ghcr.io/asseris-asi/claude-usage-dashboard`:
+
+- `edge` follows the public `main` branch.
+- `latest`, `vX.Y.Z`, `X.Y.Z`, `X.Y` and `X` are published only for a
+  non-prerelease GitHub release.
+- `sha-<12 characters>` identifies the exact public source snapshot.
+- Published images currently target `linux/amd64`.
+
+Run the current stable image:
+
+```bash
+docker pull ghcr.io/asseris-asi/claude-usage-dashboard:latest
+docker run --rm --init -p 127.0.0.1:3333:3333 \
+  -v "$HOME/.claude:/home/node/.claude:ro" \
+  -v "claude-usage-dashboard-state:/data" \
+  ghcr.io/asseris-asi/claude-usage-dashboard:latest
+```
+
+Or build the same image locally:
+
 ```bash
 docker build -t claude-usage-dashboard .
 docker run --rm --init -p 127.0.0.1:3333:3333 \
@@ -204,5 +225,9 @@ See [NOTICE](NOTICE), [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md),
 
 ## License
 
-Copyright © 2026 Asseris and contributors. Licensed under the
+Copyright © 2026 ASSERIS AISBL and contributors. Licensed under the
 [Apache License 2.0](LICENSE).
+
+`ASSERIS`, the ASSERIS wordmark and logos are registered trademarks of
+ASSERIS AISBL. Apache-2.0 grants no trademark license; see
+[TRADEMARKS.md](TRADEMARKS.md).

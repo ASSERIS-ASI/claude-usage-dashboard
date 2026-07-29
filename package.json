@@ -1,6 +1,6 @@
 {
   "name": "@asseris/claude-usage-dashboard",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "description": "Local, read-only analytics dashboard for Claude Code usage and compatible cache telemetry.",
   "license": "Apache-2.0",
   "author": "Asseris",
@@ -23,7 +23,7 @@
     "apps",
     "public/css",
     "public/js",
-    "public/img/*.svg",
+    "public/img",
     "public/release-history-fallback.json",
     "scripts",
     "test",
@@ -37,6 +37,7 @@
     "SECURITY.md",
     "product-manifest.json",
     "NOTICE",
+    "TRADEMARKS.md",
     "THIRD_PARTY_LICENSES",
     "THIRD_PARTY_NOTICES.md"
   ],

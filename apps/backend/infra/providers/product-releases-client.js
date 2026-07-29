@@ -5,7 +5,8 @@
  *
  * Published Gitea releases are mirrored to the public GitHub repository. This
  * client reads that public release feed, keeps a local disk cache and merges
- * it with the immutable predecessor fallback bundled with the dashboard.
+ * it with the current bundled changelog entry and immutable predecessor
+ * fallback bundled with the dashboard.
  */
 var fs = require('node:fs');
 var path = require('node:path');
@@ -93,7 +94,49 @@ function readJson(filePath, serviceLog, label) {
 
 function readFallback(root, serviceLog) {
   var fallbackPath = path.join(root, 'public', 'release-history-fallback.json');
-  return normalizeEntries(readJson(fallbackPath, serviceLog, 'fallback'));
+  var predecessorEntries = normalizeEntries(readJson(fallbackPath, serviceLog, 'fallback'));
+  var currentEntry = readBundledCurrentRelease(root, serviceLog);
+  return mergeReleaseEntries(currentEntry ? [currentEntry] : [], predecessorEntries);
+}
+
+function readBundledCurrentRelease(root, serviceLog) {
+  var pkg = readJson(path.join(root, 'package.json'), serviceLog, 'package metadata');
+  var version = String(pkg && pkg.version || '').trim();
+  if (!VERSION_RE.test(version)) return null;
+
+  var changelogPath = path.join(root, 'CHANGELOG.md');
+  if (!fs.existsSync(changelogPath)) return null;
+
+  var changelog;
+  try {
+    changelog = fs.readFileSync(changelogPath, 'utf8');
+  } catch (error) {
+    serviceLog.warn(
+      'product-releases',
+      'changelog read failed: ' + (error.message || error)
+    );
+    return null;
+  }
+
+  var escapedVersion = version.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  var headerPattern = new RegExp(
+    '^## \\[' + escapedVersion + '\\](?: - (\\d{4}-\\d{2}-\\d{2}))?\\s*$',
+    'm'
+  );
+  var header = headerPattern.exec(changelog);
+  if (!header) return null;
+
+  var bodyStart = header.index + header[0].length;
+  var remainder = changelog.slice(bodyStart).replace(/^\r?\n/, '');
+  var nextSection = /^## \[/m.exec(remainder);
+  var body = (nextSection ? remainder.slice(0, nextSection.index) : remainder).trim();
+
+  return {
+    tag_name: 'v' + version,
+    published_at: header[1] ? header[1] + 'T00:00:00Z' : '',
+    name: 'v' + version,
+    body: body || 'Release v' + version
+  };
 }
 
 function readDiskCache(cacheFile, serviceLog) {
@@ -196,5 +239,6 @@ module.exports = {
   compareReleaseEntries: compareReleaseEntries,
   createClient: createClient,
   mergeReleaseEntries: mergeReleaseEntries,
-  normalizeEntries: normalizeEntries
+  normalizeEntries: normalizeEntries,
+  readBundledCurrentRelease: readBundledCurrentRelease
 };

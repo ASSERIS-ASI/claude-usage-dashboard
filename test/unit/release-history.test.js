@@ -135,6 +135,45 @@ test('offline refresh serves the immutable bundled fallback', async function (t)
   ]);
 });
 
+test('bundled package version is visible before its mirrored release is available', async function (t) {
+  var root = makeFixture();
+  t.after(function () { fs.rmSync(root, { recursive: true, force: true }); });
+  fs.writeFileSync(
+    path.join(root, 'package.json'),
+    JSON.stringify({ version: '1.10.0' })
+  );
+  fs.writeFileSync(
+    path.join(root, 'CHANGELOG.md'),
+    [
+      '# Changelog',
+      '',
+      '## [1.10.0] - 2026-07-30',
+      '',
+      '### Added',
+      '',
+      '- Release-gated public distribution.',
+      '',
+      '## [1.9.0] - 2026-07-29',
+      '',
+      '- Previous release.'
+    ].join('\n')
+  );
+  var client = productReleases.createClient({
+    cacheFile: path.join(root, 'state', 'missing-cache.json'),
+    cacheTtlMs: 60000,
+    fetchReleases: function (callback) {
+      callback(new Error('mirror pending'), null);
+    }
+  });
+
+  var history = await readHistory(client, root);
+
+  assert.equal(history[0].tag_name, 'v1.10.0');
+  assert.equal(history[0].published_at, '2026-07-30T00:00:00Z');
+  assert.match(history[0].body, /Release-gated public distribution/);
+  assert.doesNotMatch(history[0].body, /Previous release/);
+});
+
 test('release-history route serves provider results without browser caching', async function () {
   var response = { status: 0, headers: {}, body: '' };
   var route = releaseHistoryRoutes.register({

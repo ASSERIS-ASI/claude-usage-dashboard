@@ -1,0 +1,126 @@
+name: Publish GHCR container
+
+on:
+  push:
+    branches: [main]
+  release:
+    types: [published]
+
+concurrency:
+  group: ghcr-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    if: github.event_name != 'release' || github.event.release.prerelease == false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE_NAME: ghcr.io/asseris-asi/claude-usage-dashboard
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Verify public distribution
+        run: |
+          set -euo pipefail
+          test ! -e Jenkinsfile
+          test ! -d .gitea
+          test ! -e scripts/scrub-for-public.sh
+          npm ci
+          npm run ci
+
+      - name: Resolve immutable image tags
+        id: metadata
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+
+          short_sha="${GITHUB_SHA:0:12}"
+          tags=("${IMAGE_NAME}:sha-${short_sha}")
+          version="edge"
+
+          if [ "$EVENT_NAME" = "release" ]; then
+            if ! printf '%s' "$RELEASE_TAG" |
+              grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+              echo "::error::Unsupported release tag: ${RELEASE_TAG}"
+              exit 1
+            fi
+
+            version="${RELEASE_TAG#v}"
+            major="${version%%.*}"
+            remainder="${version#*.}"
+            minor="${remainder%%.*}"
+            tags+=(
+              "${IMAGE_NAME}:${RELEASE_TAG}"
+              "${IMAGE_NAME}:${version}"
+              "${IMAGE_NAME}:${major}.${minor}"
+              "${IMAGE_NAME}:${major}"
+              "${IMAGE_NAME}:latest"
+            )
+          else
+            tags+=("${IMAGE_NAME}:edge")
+          fi
+
+          {
+            echo "version=${version}"
+            echo "tags<<EOF"
+            printf '%s\n' "${tags[@]}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          printf '%s' "$GHCR_TOKEN" |
+            docker login ghcr.io --username "${GITHUB_ACTOR}" --password-stdin
+
+      - name: Create BuildKit builder
+        run: |
+          docker buildx create \
+            --name asseris-ghcr-builder \
+            --driver docker-container \
+            --use
+          docker buildx inspect --bootstrap
+
+      - name: Build and publish
+        env:
+          IMAGE_TAGS: ${{ steps.metadata.outputs.tags }}
+          IMAGE_VERSION: ${{ steps.metadata.outputs.version }}
+        run: |
+          set -euo pipefail
+          mapfile -t tags <<< "$IMAGE_TAGS"
+          tag_args=()
+          for tag in "${tags[@]}"; do
+            tag_args+=(--tag "$tag")
+          done
+
+          docker buildx build \
+            --platform linux/amd64 \
+            --provenance=mode=max \
+            --sbom=true \
+            --build-arg "OCI_SOURCE=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}" \
+            --build-arg "OCI_REVISION=${GITHUB_SHA}" \
+            --build-arg "OCI_VERSION=${IMAGE_VERSION}" \
+            "${tag_args[@]}" \
+            --push \
+            .
+
+      - name: Clean up registry session
+        if: always()
+        run: |
+          docker logout ghcr.io || true
+          docker buildx rm asseris-ghcr-builder || true

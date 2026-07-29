@@ -46,4 +46,9 @@ Meter**도 동시에 활성화할 수 있으며, 동일한 요청 ID를 가진 �
 태그를 정리된 저장소의 새 커밋으로 다시 지정하지 않습니다.
 [CHANGELOG.md](CHANGELOG.md)를 참조하십시오.
 
-Apache-2.0 라이선스: [LICENSE](LICENSE), [NOTICE](NOTICE).
+저작권 © 2026 ASSERIS AISBL 및 기여자. Apache-2.0 라이선스:
+[LICENSE](LICENSE), [NOTICE](NOTICE).
+
+`ASSERIS`, ASSERIS 워드마크 및 로고는 ASSERIS AISBL의 등록 상표입니다.
+Apache-2.0은 상표 사용권을 부여하지 않습니다.
+[TRADEMARKS.md](TRADEMARKS.md)를 참조하십시오.

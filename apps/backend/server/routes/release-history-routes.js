@@ -2,7 +2,8 @@
 
 /**
  * Read-only release-history endpoint. Published Gitea releases are mirrored
- * to GitHub; the provider supplies that public feed or its offline fallback.
+ * to GitHub; the provider supplies that public feed or the bundled current
+ * changelog entry plus its offline predecessor fallback.
  */
 function register(deps) {
   var getReleaseHistory = deps.getReleaseHistory;

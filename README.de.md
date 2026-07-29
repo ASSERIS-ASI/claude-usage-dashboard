@@ -64,5 +64,9 @@ umgebogen. Siehe [CHANGELOG.md](CHANGELOG.md).
 
 ## Lizenz
 
-Copyright © 2026 Asseris und Mitwirkende. Apache-2.0; siehe [LICENSE](LICENSE)
-und [NOTICE](NOTICE).
+Copyright © 2026 ASSERIS AISBL und Mitwirkende. Apache-2.0; siehe
+[LICENSE](LICENSE) und [NOTICE](NOTICE).
+
+`ASSERIS`, die ASSERIS-Wortmarke und die Logos sind eingetragene Marken der
+ASSERIS AISBL. Apache-2.0 erteilt keine Markenlizenz; siehe
+[TRADEMARKS.md](TRADEMARKS.md).
