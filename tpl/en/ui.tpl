@@ -225,7 +225,7 @@
   "updateSlideoutHeading": "Extension update",
   "updateSlideoutNoDetail": "No version details for this day.",
   "updateSlideoutHighlights": "Release notes (excerpt)",
-  "updateSlideoutHighlightsEmpty": "No excerpt yet: after each scan the server backfills missing releases via HTTPS into ~/.claude/claude-code-releases.json — wait for the live update, then open this panel again. Or open GitHub:",
+  "updateSlideoutHighlightsEmpty": "No excerpt yet: after each scan the server backfills missing releases via HTTPS into the local metadata cache — wait for the live update, then open this panel again. Or open GitHub:",
   "updateSlideoutGithubReleases": "GitHub releases",
   "updateSlideoutStatusHeading": "Anthropic status / outages (this day)",
   "updateSlideoutOutageHoursLine": "Outage time: {total} h total (server {srv} h · client {cli} h)",

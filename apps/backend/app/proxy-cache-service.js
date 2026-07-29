@@ -2,8 +2,8 @@
 
 var crypto = require('node:crypto');
 var fs = require('node:fs');
-var os = require('node:os');
 var path = require('node:path');
+var storagePaths = require('../domain/usage/storage-paths');
 
 /**
  * Local, read-only request-telemetry cache.
@@ -24,7 +24,7 @@ module.exports = function createProxyCacheService(opts) {
   var overageHistoryLoaded = false;
   var overageHistoryFingerprint = null;
   var overageHistoryPath = process.env.CLAUDE_USAGE_OVERAGE_HISTORY_PATH ||
-    path.join(os.homedir(), '.claude', 'usage-dashboard-product', 'overage-history.ndjson');
+    storagePaths.stateFile('overage-history.ndjson');
 
   function loadOverageHistoryFingerprint() {
     if (overageHistoryLoaded) return;

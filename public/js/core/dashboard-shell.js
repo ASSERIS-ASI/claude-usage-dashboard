@@ -1,7 +1,5 @@
 /**
- * Standalone dashboard shell: scan progress, recompute overlay and chart
- * loading states. Remote sync and gateway onboarding intentionally do not
- * exist in the public product.
+ * Dashboard shell: scan progress, recompute overlay and chart loading states.
  */
 'use strict';
 

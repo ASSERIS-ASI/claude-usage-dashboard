@@ -110,7 +110,7 @@
           if (relBody.dataset.loaded) return;
           relBody.innerHTML = '<p style="color:#8C6A3F;font-size:.75rem">Loading releases...</p>';
           var rlXhr = new XMLHttpRequest();
-          rlXhr.open("GET", "/assets/release-history.json", true);
+          rlXhr.open("GET", "/api/release-history", true);
           rlXhr.onload = function () {
             if (rlXhr.status !== 200) {
               relBody.innerHTML = '<p style="color:#ef4444;font-size:.75rem">Failed to load releases</p>';
@@ -126,7 +126,7 @@
               var isFirst = true;
               for (var rel of releases) {
                 var rDate = rel.published_at ? rel.published_at.slice(0, 10) : "";
-                var rBody2 = (rel.body || "").replace(/^## .+\n?/m, "");
+                var rBody2 = rel.body || "";
                 rh += "<details class=\"release-modal-item\"" + (isFirst ? " open" : "") + ">";
                 isFirst = false;
                 rh += "<summary class=\"release-modal-item-head\">";
@@ -134,7 +134,7 @@
                 rh += "<span class=\"rel-date\">" + window.escHtml(rDate) + "</span>";
                 if (rel.name && rel.name !== rel.tag_name) rh += " — " + window.escHtml(rel.name);
                 rh += "</summary>";
-                rh += "<div class=\"release-modal-item-body\">" + marked.parse(rBody2) + "</div>";
+                rh += "<div class=\"release-modal-item-body\">" + window.renderSafeMarkdown(rBody2) + "</div>";
                 rh += "</details>";
               }
               relBody.innerHTML = rh;

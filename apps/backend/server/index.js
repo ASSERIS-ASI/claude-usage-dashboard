@@ -13,11 +13,9 @@
  * @asseris-consumes     HTTP request stream, route module exports
  *
  * server/index.js — HTTP Server Composition Root.
- *
- * Operational gateway, reverse-proxy, CA, serializer, sync-server and request
- * rewrite capabilities deliberately do not exist in this repository.
  */
 var http = require('node:http');
+var securityHeaders = require('./security-headers');
 var productProfile = require('../product-profile');
 var productSetup = productProfile.dashboardOnly ? require('../app/product-setup') : null;
 
@@ -28,6 +26,8 @@ var debugRoutes = require('./routes/debug-routes');
 var debugJsonlRoutes = require('./routes/debug-jsonl-routes');
 var debugCacheRoutes = require('./routes/debug-cache-routes');
 var providerRoutes = require('./routes/provider-routes');
+var releaseHistoryRoutes = require('./routes/release-history-routes');
+var productReleasesClient = require('../infra/providers/product-releases-client');
 
 /**
  * Creates and returns the HTTP server.
@@ -48,32 +48,40 @@ function createServer(ctx) {
   routeHandlers.push(debugRoutes.register(ctx.deps).handle);
   routeHandlers.push(debugJsonlRoutes.register(ctx.deps).handle);
   routeHandlers.push(debugCacheRoutes.register(ctx.deps).handle);
+  var releaseClient = productReleasesClient.createClient({
+    serviceLog: ctx.serviceLog
+  });
+  routeHandlers.push(releaseHistoryRoutes.register({
+    getReleaseHistory: function (callback) {
+      releaseClient.getReleaseHistory(ctx.DASHBOARD_SCRIPT_DIR, callback);
+    },
+    serviceLog: ctx.serviceLog
+  }).handle);
   if (ctx.providerRouteDeps) {
     routeHandlers.push(providerRoutes(ctx.providerRouteDeps).handle);
   }
 
   var server = http.createServer(function (req, res) {
     var pathname = ctx.dashboardHttp.requestPathname(req.url);
+    var cspNonce = securityHeaders.createNonce();
+    securityHeaders.applySecurityHeaders(res, cspNonce);
+
+    if (securityHeaders.rejectCrossOriginApiRequest(req, res, pathname)) return;
 
     if (productProfile.dashboardOnly && pathname === '/api/product-capabilities') {
       var setupStatus = productSetup.status();
+      var evidenceSources = ['claude-jsonl'];
+      if (setupStatus.sources.cache_fix) evidenceSources.push('claude-code-cache-fix');
+      if (setupStatus.sources.meter) evidenceSources.push('claude-code-meter');
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
       res.end(JSON.stringify({
         product: 'Claude Usage Dashboard',
         profile: 'dashboard',
         read_only_evidence: true,
-        gateway_runtime: false,
-        proxy_control: false,
-        mitm_ca: false,
-        serializer_control: false,
-        request_rewrites: false,
-        source_mode: setupStatus.mode,
+        source_mode: 'additive',
+        source_selection: setupStatus.sources,
         setup_configured: setupStatus.configured,
-        evidence_sources: setupStatus.mode === 'cache-fix'
-          ? ['claude-jsonl', 'claude-code-cache-fix']
-          : setupStatus.mode === 'meter'
-            ? ['claude-jsonl', 'claude-code-meter']
-          : ['claude-jsonl']
+        evidence_sources: evidenceSources
       }));
       return;
     }
@@ -169,16 +177,14 @@ function createServer(ctx) {
       if (routeHandlers[ri](pathname, req, res)) return;
     }
 
-    // API paths must never fall through to HTML. In the distributable product
-    // this also makes removed operational surfaces explicitly unavailable.
+    // API paths must never fall through to HTML.
     if (pathname.startsWith('/api/')) {
       res.writeHead(404, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
       res.end(JSON.stringify({ error: 'not_available', product: productProfile.name }));
       return;
     }
 
-    // Only the root document is a dashboard route. Unknown paths—including
-    // proxy-shaped endpoints such as /v1/messages—must remain unavailable.
+    // Only the root document is a dashboard route.
     if (pathname !== '/' || (req.method !== 'GET' && req.method !== 'HEAD')) {
       res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' });
       res.end('Not Found');
@@ -186,8 +192,13 @@ function createServer(ctx) {
     }
 
     // Default fallback: serve dashboard HTML.
-    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-    res.end(req.method === 'HEAD' ? '' : ctx.getDashboardHtml());
+    res.writeHead(200, {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'no-store'
+    });
+    res.end(req.method === 'HEAD'
+      ? ''
+      : ctx.getDashboardHtml().replace('__CSP_NONCE__', cspNonce));
   });
 
   return server;

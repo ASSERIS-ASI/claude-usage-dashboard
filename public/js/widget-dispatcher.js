@@ -253,11 +253,7 @@
       var fn = global[sec.sectionRenderFn];
       if (typeof fn !== 'function') continue;
 
-      if (sec.dataSource === '/api/session-turns') {
-        fn(renderData, days);
-      } else {
-        fn(renderData, days);
-      }
+      fn(renderData, days);
     }
 
     // Render extracted charts individually (Phase 5: chart-level widgets)

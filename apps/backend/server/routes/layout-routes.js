@@ -3,9 +3,8 @@
 /**
  * Local dashboard layout persistence.
  *
- * The public dashboard has no remote gateway, sync client, or outbound layout
- * proxy. Layouts are read from and written to the standalone product state
- * directory through layoutStore.
+ * Layouts are read from and written to the product state directory through
+ * layoutStore.
  */
 function register(deps) {
   var layoutStore = deps.layoutStore;

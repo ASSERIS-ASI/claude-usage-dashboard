@@ -26,14 +26,7 @@ function freePort() {
 
 function stop() {
   if (!child || child.exitCode != null) return;
-  if (process.platform === 'win32') {
-    cp.spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], {
-      windowsHide: true,
-      stdio: 'ignore'
-    });
-  } else {
-    child.kill('SIGTERM');
-  }
+  child.kill('SIGTERM');
 }
 
 async function request(url, options) {
@@ -75,10 +68,37 @@ async function request(url, options) {
   var capabilitiesResponse = await request(base + '/api/product-capabilities');
   if (!capabilitiesResponse.ok) throw new Error('capabilities endpoint returned ' + capabilitiesResponse.status);
   var capabilities = await capabilitiesResponse.json();
-  for (var key of ['gateway_runtime', 'proxy_control', 'mitm_ca', 'serializer_control', 'request_rewrites']) {
-    if (capabilities[key] !== false) throw new Error(key + ' must be false');
-  }
   if (capabilities.read_only_evidence !== true) throw new Error('read_only_evidence must be true');
+  var capabilityKeys = [
+    'product', 'profile', 'read_only_evidence', 'source_mode',
+    'source_selection', 'setup_configured', 'evidence_sources'
+  ];
+  var unexpectedCapability = Object.keys(capabilities).find(function (key) {
+    return !capabilityKeys.includes(key);
+  });
+  if (unexpectedCapability) throw new Error('unexpected capability field: ' + unexpectedCapability);
+  if (capabilities.source_mode !== 'additive') {
+    throw new Error('source_mode must describe additive source selection');
+  }
+  if (capabilities.source_selection?.claude_jsonl !== true ||
+      capabilities.source_selection?.cache_fix !== false ||
+      capabilities.source_selection?.meter !== false) {
+    throw new Error('default source selection is invalid');
+  }
+  if (capabilities.evidence_sources.join(',') !== 'claude-jsonl') {
+    throw new Error('unexpected default evidence sources');
+  }
+  if (capabilitiesResponse.headers.has('access-control-allow-origin')) {
+    throw new Error('capabilities endpoint exposed a cross-origin policy');
+  }
+
+  var crossOrigin = await fetch(base + '/api/debug/cache-files', {
+    headers: {
+      Origin: 'https://attacker.example',
+      'Sec-Fetch-Site': 'cross-site'
+    }
+  });
+  if (crossOrigin.status !== 403) throw new Error('cross-origin API request returned ' + crossOrigin.status);
 
   var status = await (await fetch(base + '/api/debug/status')).json();
   if (status.local !== true || status.read_only_sources !== true) {
@@ -90,7 +110,29 @@ async function request(url, options) {
   if (!htmlResponse.ok || !/<!DOCTYPE html>/i.test(html) || !/Claude Usage Dashboard/i.test(html)) {
     throw new Error('dashboard HTML was not served');
   }
+  if (!htmlResponse.headers.get('content-security-policy')?.includes("script-src 'self' 'nonce-")) {
+    throw new Error('nonce-bound Content Security Policy missing');
+  }
+  if (htmlResponse.headers.get('x-frame-options') !== 'DENY') {
+    throw new Error('frame protection missing');
+  }
   if (/__[A-Z0-9_]+__/.test(html)) throw new Error('unresolved template placeholder in dashboard HTML');
+  if (/https?:\/\/(?:cdn\.|fonts\.googleapis|code\.jquery)/i.test(html)) {
+    throw new Error('dashboard HTML contains a remote browser dependency');
+  }
+
+  for (var asset of [
+    '/assets/vendor/dataTables.min.js',
+    '/assets/vendor/dataTables.min.css',
+    '/assets/vendor/echarts.min.js',
+    '/assets/vendor/marked.umd.js',
+    '/assets/vendor/purify.min.js',
+    '/assets/core/safe-markdown.js',
+    '/assets/vendor/cinzel-latin-400-normal.woff2'
+  ]) {
+    var assetResponse = await fetch(base + asset);
+    if (!assetResponse.ok) throw new Error(asset + ' returned ' + assetResponse.status);
+  }
 
   for (var removed of ['/api/gateway-config', '/api/serializer-stats', '/api/claude-data-sync']) {
     var removedResponse = await fetch(base + removed);

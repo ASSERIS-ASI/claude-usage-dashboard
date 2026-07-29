@@ -22,7 +22,7 @@
 var fs = require('node:fs');
 var path = require('node:path');
 var httpsPostJson = require('../http-client').httpsPostJson;
-var HOME = require('../../domain/usage/scan-roots').HOME;
+var storagePaths = require('../../domain/usage/storage-paths');
 var buildSnapshot = require('../../app/build-usage-snapshot');
 var normalizeCliSemver = buildSnapshot.normalizeCliSemver;
 var semverCmp = buildSnapshot.semverCmp;
@@ -37,7 +37,11 @@ var isoToLocalYmd = ghClient.isoToLocalYmd;
 var releasesCache = ghClient.releasesCache;
 
 // ── Constants ──────────────────────────────────────────────────────────────
-var MARKETPLACE_CACHE = path.join(HOME, '.claude', 'claude-code-marketplace-versions.json');
+var MARKETPLACE_CACHE = storagePaths.stateFile('claude-code-marketplace-versions.json');
+storagePaths.migrateLegacyFileIfMissing(
+  MARKETPLACE_CACHE,
+  'claude-code-marketplace-versions.json'
+);
 var MARKETPLACE_QUERY_URL = 'https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery';
 var MARKETPLACE_EXTENSION_ID = 'anthropic.claude-code';
 var MARKETPLACE_QUERY_FLAGS = 0x1;

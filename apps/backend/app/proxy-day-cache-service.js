@@ -22,6 +22,7 @@
  */
 var fs = require('fs');
 var path = require('path');
+var storagePaths = require('../domain/usage/storage-paths');
 
 module.exports = function createProxyDayCacheService(opts) {
   var serviceLog                      = opts.serviceLog;
@@ -53,9 +54,7 @@ module.exports = function createProxyDayCacheService(opts) {
     var raw = String(process.env.CLAUDE_USAGE_PROXY_DAY_CACHE_DIR || '').trim();
     if (raw === '0' || raw === 'off' || raw === 'false') return '';
     if (!raw) {
-      var home = process.env.USERPROFILE || process.env.HOME || require('node:os').homedir();
-      if (!home) return '';
-      return path.join(home, '.claude', 'proxy-day-cache');
+      return path.join(storagePaths.stateDir(), 'proxy-day-cache');
     }
     try {
       var ex = expandUserPath(raw);

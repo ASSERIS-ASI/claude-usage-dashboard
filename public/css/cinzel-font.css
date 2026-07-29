@@ -1,0 +1,15 @@
+@font-face {
+  font-family: "Cinzel";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url("/assets/vendor/cinzel-latin-400-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Cinzel";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url("/assets/vendor/cinzel-latin-600-normal.woff2") format("woff2");
+}

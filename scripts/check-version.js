@@ -8,7 +8,6 @@ var root = path.resolve(__dirname, '..');
 var pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 var lock = JSON.parse(fs.readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
 var versionFile = fs.readFileSync(path.join(root, 'VERSION'), 'utf8').trim();
-var history = JSON.parse(fs.readFileSync(path.join(root, 'public', 'release-history.json'), 'utf8'));
 var changelog = fs.readFileSync(path.join(root, 'CHANGELOG.md'), 'utf8');
 var version = String(pkg.version || '');
 var tag = 'v' + version;
@@ -22,14 +21,8 @@ if (lock.version !== version) failures.push('package-lock.json root version diff
 if (!lock.packages || !lock.packages[''] || lock.packages[''].version !== version) {
   failures.push('package-lock.json package version differs from package.json');
 }
-if (!Array.isArray(history) || !history.length || history[0].tag_name !== tag) {
-  failures.push('public/release-history.json must start with ' + tag);
-}
 if (!changelog.includes('## [' + version + ']')) {
   failures.push('CHANGELOG.md has no section for ' + version);
-}
-if (!fs.existsSync(path.join(root, 'release-notes', tag + '.md'))) {
-  failures.push('release-notes/' + tag + '.md is missing');
 }
 
 if (failures.length) {

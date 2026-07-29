@@ -15,8 +15,10 @@ function debugPath(env, home) {
 function selectedPath(env, home) {
   var setup = null;
   try { setup = require('./product-setup').read(); } catch (error) { setup = null; }
-  var mode = setup?.mode || env?.CLAUDE_USAGE_SOURCE_MODE;
-  if (mode !== 'cache-fix') return null;
+  var sources = setup
+    ? require('./product-setup').normalizeSources(setup)
+    : require('./cache-fix-usage-adapter').enabledSources(null, env);
+  if (!sources?.cache_fix) return null;
   return setup?.cache_fix_debug ? path.resolve(setup.cache_fix_debug) : debugPath(env, home);
 }
 
@@ -46,11 +48,16 @@ function fixName(message) {
 }
 
 function parseLine(line) {
-  var match = /^\[([^\]]+)\]\s+(.+)$/.exec(String(line || ''));
-  if (!match) return null;
-  var timestamp = new Date(match[1]);
+  var text = String(line || '');
+  if (!text.startsWith('[')) return null;
+  var timestampEnd = text.indexOf(']');
+  if (timestampEnd < 2) return null;
+  var messageStart = timestampEnd + 1;
+  while (messageStart < text.length && /\s/.test(text[messageStart])) messageStart++;
+  if (messageStart >= text.length) return null;
+  var timestamp = new Date(text.slice(1, timestampEnd));
   if (!Number.isFinite(timestamp.getTime())) return null;
-  var message = match[2];
+  var message = text.slice(messageStart);
   var kind = 'info';
   if (message.startsWith('APPLIED:')) kind = 'applied';
   else if (message.startsWith('SKIPPED:')) kind = 'skipped';

@@ -75,6 +75,34 @@ function _byTsNum(a, b) {
   return ta - tb;
 }
 
+function _recordAccountScope(rec) {
+  return cacheFixUsage.accountScope(rec);
+}
+
+function _recordIdentityKeys(rec, wildcardAccount) {
+  var keys = [];
+  var account = _recordAccountScope(rec);
+  var scope = account;
+  if (wildcardAccount || !scope) scope = '*';
+  if (rec?.req_id) keys.push('req:' + scope + ':' + rec.req_id);
+  if (rec?.upstream_request_id) {
+    keys.push('upstream:' + scope + ':' + rec.upstream_request_id);
+  }
+  return keys;
+}
+
+function _recordWasSeen(rec, seenIds) {
+  var keys = _recordIdentityKeys(rec);
+  if (_recordAccountScope(rec)) keys = keys.concat(_recordIdentityKeys(rec, true));
+  return keys.some(function (key) {
+    return seenIds.has(key);
+  });
+}
+
+function _rememberRecord(rec, seenIds) {
+  for (var key of _recordIdentityKeys(rec)) seenIds.add(key);
+}
+
 // Dominanter (haeufigster) Schluessel eines count-Maps. Geteilt von model_counts/transport_counts.
 function _dominantKey(counts, fallback) {
   let best = fallback;
@@ -958,8 +986,12 @@ function _accInteropCounters(dd, rec, tsEnd) {
   if (isPeak) dd.peak_hour_requests++;
   else dd.off_peak_requests++;
 
-  let src = rec.source || 'proxy';
-  dd.data_sources[src] = (dd.data_sources[src] || 0) + 1;
+  let sources = Array.isArray(rec.evidence_sources) && rec.evidence_sources.length
+    ? rec.evidence_sources
+    : [rec.source || 'proxy'];
+  for (let src of new Set(sources)) {
+    dd.data_sources[src] = (dd.data_sources[src] || 0) + 1;
+  }
 }
 
 // Connection-Type inkl. Cursor-Idle-Heuristik + non-LLM housekeeping (monitor).
@@ -1056,12 +1088,20 @@ function _feedCore(rec, tsEnd, u, dur, gfa) {
   };
 }
 
+function _parenthesizedClient(ua) {
+  var text = String(ua || '');
+  var start = text.indexOf('(');
+  if (start < 0) return null;
+  var end = text.indexOf(')', start + 1);
+  return end > start + 1 ? text.slice(start + 1, end) : null;
+}
+
 function _feedSource(rec, ua) {
   return {
     source_ip: rec.source_ip || rec.req_headers_redacted?.['x-forwarded-for']?.split(',')[0]?.trim() || rec.remote_addr || null,
     source_os: rec.source_os || rec.cursor_os || rec.req_headers_redacted?.['x-stainless-os'] || rec.req_headers_redacted?.['x-cursor-client-os'] || _osFromIp(rec.source_ip || rec.remote_addr) || null,
     source_cli: /claude-cli\/([^\s(]+)/.exec(ua)?.[1] || rec.cursor_version || rec.req_headers_redacted?.['x-cursor-client-version'] || null,
-    source_client: /\(([^)]+)\)/.exec(ua)?.[1] || null,
+    source_client: _parenthesizedClient(ua),
     tls: rec.tls || false,
     session_id: rec.session_id || null,
     account_key: rec.account_key || null,
@@ -1422,7 +1462,9 @@ function parseProxyNdjsonFiles(opts) {
   opts = opts || {};
   let latestDayFull = opts.latestDayFull !== false;
   let files = _resolveParseFiles(opts);
-  let cacheFixFiles = opts.files ? [] : cacheFixUsage.collect(process.env, usageScanRoots.HOME);
+  let cacheFixSources = opts.files
+    ? []
+    : cacheFixUsage.collectSources(process.env, usageScanRoots.HOME);
   let cacheFixDebug = opts.files ? { file: null, days: {} } :
     require('./cache-fix-debug-adapter').collect(process.env, usageScanRoots.HOME);
   let daily = {};
@@ -1433,8 +1475,8 @@ function parseProxyNdjsonFiles(opts) {
       forEachJsonlLineSync(file, function (line) {
         try {
           let rec = JSON.parse(line);
-          if (rec.req_id && seenIds.has(rec.req_id)) return;
-          if (rec.req_id) seenIds.add(rec.req_id);
+          if (_recordWasSeen(rec, seenIds)) return;
+          _rememberRecord(rec, seenIds);
         } catch (e) { return; }
         _processNdjsonLine(line, daily, file);
       });
@@ -1442,21 +1484,37 @@ function parseProxyNdjsonFiles(opts) {
       serviceLog.warn('proxy-parse', 'ndjson read failed ' + file + ': ' + (e.message || e));
     }
   }
-  for (let file of cacheFixFiles) {
-    let evidenceSource = /(?:^|[\\/])claude-meter\.jsonl$/i.test(file)
-      ? 'claude-code-meter'
-      : 'claude-code-cache-fix';
+  let evidenceRecords = new Map();
+  for (let selectedSource of cacheFixSources) {
+    let file = selectedSource.file;
+    let evidenceSource = selectedSource.source;
     try {
       forEachJsonlLineSync(file, function (line) {
         let raw;
         try { raw = JSON.parse(line); } catch (e) { return; }
         let rec = cacheFixUsage.translate(raw, evidenceSource);
-        if (!rec || seenIds.has(rec.req_id)) return;
-        seenIds.add(rec.req_id);
-        _processNdjsonLine(JSON.stringify(rec), daily, file);
+        if (!rec) return;
+        let identity = rec.upstream_request_id || rec.req_id;
+        let candidates = evidenceRecords.get(identity) || [];
+        let existing = candidates.find(function (candidate) {
+          return cacheFixUsage.accountsCanMerge(candidate.record, rec);
+        });
+        if (existing) {
+          existing.record = cacheFixUsage.mergeTranslated(existing.record, rec);
+        } else {
+          candidates.push({ file: file, record: rec });
+        }
+        evidenceRecords.set(identity, candidates);
       });
     } catch (e) {
       serviceLog.warn('evidence-parse', 'cache-fix usage read failed ' + file + ': ' + (e.message || e));
+    }
+  }
+  for (let candidates of evidenceRecords.values()) {
+    for (let evidence of candidates) {
+      if (_recordWasSeen(evidence.record, seenIds)) continue;
+      _rememberRecord(evidence.record, seenIds);
+      _processNdjsonLine(JSON.stringify(evidence.record), daily, evidence.file);
     }
   }
 
@@ -1476,9 +1534,9 @@ function parseProxyNdjsonFiles(opts) {
     proxy_days: result,
     proxy_log_dir: getProxyLogDir(),
     proxy_files: files.length,
-    cache_fix_usage_files: cacheFixFiles.length,
+    cache_fix_usage_files: cacheFixSources.length,
     cache_fix_debug_file: cacheFixDebug.file,
-    evidence_files: files.length + cacheFixFiles.length,
+    evidence_files: files.length + cacheFixSources.length,
     host_labels: {},
     account_labels: {},
     generated: new Date().toISOString()

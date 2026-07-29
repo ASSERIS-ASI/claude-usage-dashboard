@@ -225,7 +225,7 @@
   "updateSlideoutHeading": "Extension-Update",
   "updateSlideoutNoDetail": "Keine Versionsdetails für diesen Tag.",
   "updateSlideoutHighlights": "Release-Notes (Auszug)",
-  "updateSlideoutHighlightsEmpty": "Noch kein Auszug: der Server lädt fehlende Releases nach dem Scan per HTTPS in ~/.claude/claude-code-releases.json — kurz warten bis SSE aktualisiert, dann Slideout erneut öffnen. Oder direkt auf GitHub:",
+  "updateSlideoutHighlightsEmpty": "Noch kein Auszug: der Server lädt fehlende Releases nach dem Scan per HTTPS in den lokalen Metadaten-Cache — kurz auf das SSE-Update warten, dann das Slideout erneut öffnen. Oder direkt auf GitHub:",
   "updateSlideoutGithubReleases": "GitHub-Releases",
   "updateSlideoutStatusHeading": "Anthropic Status / Ausfälle (dieser Tag)",
   "updateSlideoutOutageHoursLine": "Ausfall-Zeit: {total} h gesamt (Server {srv} h · Client {cli} h)",

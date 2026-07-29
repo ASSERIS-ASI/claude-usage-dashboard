@@ -854,10 +854,14 @@
   }
 
   function tbChartIsAvailableForSource(sectionId, chart) {
+    var setupSources = window.__productSetup?.sources || {};
     var setupMode = window.__productSetup?.mode || '';
     var requestOnlyProxy = window.__proxyRequestOnly === true ||
+      setupSources.cache_fix === true ||
+      setupSources.meter === true ||
       setupMode === 'cache-fix' ||
-      setupMode === 'meter';
+      setupMode === 'meter' ||
+      setupMode === 'combined';
     return !(sectionId === 'proxy' && requestOnlyProxy && chart?.fullProxyOnly);
   }
 

@@ -2,7 +2,7 @@
 /**
  * @asseris-module       Extract Cache
  * @asseris-description  Pre-extracts JSONL records into ~150-byte mini-records on disk
- *                       (~/.claude/usage-dashboard-extract.json) so subsequent scans skip
+ *                       (derived state directory) so subsequent scans skip
  *                       multi-KB JSON.parse rounds on unchanged content.
  * @asseris-pillar       infra
  * @asseris-domain       analytics-pipeline
@@ -11,7 +11,7 @@
  * @asseris-anchor       —
  * @asseris-calls        —
  * @asseris-called-by    Usage Scan Orchestrator
- * @asseris-emits        ~/.claude/usage-dashboard-extract.json file
+ * @asseris-emits        derived extract-cache file
  * @asseris-consumes     JSONL files, mini-record schema
  *
  * extract-cache.js — Pre-extract JSONL records into lightweight mini-records.
@@ -19,7 +19,7 @@
  * Eliminates repeated JSON.parse of multi-KB JSONL records (message content,
  * tools, prompts). Stores only the ~150 bytes per record the dashboard needs.
  *
- * Cache file: ~/.claude/usage-dashboard-extract.json
+ * Cache file: CLAUDE_USAGE_STATE_DIR/usage-dashboard-extract.json
  *
  * Usage:
  *   var ec = require('./extract-cache');
@@ -30,11 +30,11 @@
  */
 var fs = require('node:fs');
 var path = require('node:path');
+var storagePaths = require('../domain/usage/storage-paths');
 
-var HOME = process.env.HOME || process.env.USERPROFILE || '';
-var EXTRACT_STATE_DIR = process.env.CLAUDE_USAGE_STATE_DIR ||
-  path.join(HOME, '.claude');
+var EXTRACT_STATE_DIR = storagePaths.stateDir();
 var CACHE_FILE = path.join(EXTRACT_STATE_DIR, 'usage-dashboard-extract.json');
+storagePaths.migrateLegacyFileIfMissing(CACHE_FILE, 'usage-dashboard-extract.json');
 var CACHE_VERSION = 1;
 
 // ── Signal detection (mirrored from dashboard-server.js) ────────────────

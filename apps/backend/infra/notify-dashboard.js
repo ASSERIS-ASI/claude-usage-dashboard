@@ -26,9 +26,15 @@
 var http = require('node:http');
 var https = require('node:https');
 
+function withoutTrailingSlashes(value) {
+  var normalized = String(value || '');
+  while (normalized.endsWith('/')) normalized = normalized.slice(0, -1);
+  return normalized;
+}
+
 function notifyDashboard(dashboardUrl, source, serviceLog, cb) {
   cb = cb || function () {};
-  var url = dashboardUrl.replace(/\/+$/, '') + '/api/provider-notify';
+  var url = withoutTrailingSlashes(dashboardUrl) + '/api/provider-notify';
   var body = JSON.stringify({ source: source });
   var parsed;
   try { parsed = new URL(url); } catch (e) { return cb(e); }
@@ -45,8 +51,7 @@ function notifyDashboard(dashboardUrl, source, serviceLog, cb) {
     path: parsed.pathname,
     method: 'POST',
     headers: headers,
-    timeout: 10000,
-    rejectUnauthorized: false
+    timeout: 10000
   };
 
   var req = mod.request(opts, function (res) {

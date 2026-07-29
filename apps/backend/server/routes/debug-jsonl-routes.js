@@ -19,8 +19,8 @@
  */
 
 var rh = require('../route-helpers');
-var CORS_JSON = rh.CORS_JSON;
-var CORS_JSON_NOCACHE = rh.CORS_JSON_NOCACHE;
+var JSON_HEADERS = rh.JSON_HEADERS;
+var JSON_HEADERS_NOCACHE = rh.JSON_HEADERS_NOCACHE;
 var getLocalScanRoots = require('../../domain/usage/scan-roots').getLocalScanRoots;
 var walkJsonl = require('../../domain/usage/scan-roots').walkJsonl;
 function register(deps) {
@@ -32,13 +32,13 @@ function register(deps) {
   function handle(pathname, req, res) {
     // ── /api/debug/rebuild-jsonl-cache  POST ──
     if (pathname === '/api/debug/rebuild-jsonl-cache' && req.method === 'POST') {
-      var corsJr = CORS_JSON;
+      var responseHeaders = JSON_HEADERS;
       var jsonlAgentPort = Number.parseInt(process.env.CLAUDE_USAGE_JSONL_AGENT_PORT, 10) || 3335;
       serviceLog.info('scanner', 'POST /api/debug/rebuild-jsonl-cache — triggering jsonl-agent');
       var jrReq = require('node:http').request({ hostname: '127.0.0.1', port: jsonlAgentPort, path: '/trigger', method: 'POST', timeout: 5000 });
       jrReq.on('error', function (e) { serviceLog.warn('debug', 'jsonl-agent trigger: ' + (e.message || e)); });
       jrReq.end();
-      res.writeHead(200, corsJr);
+      res.writeHead(200, responseHeaders);
       res.end(JSON.stringify({ ok: true, message: 'jsonl_rescan_triggered' }));
       return true;
     }
@@ -47,7 +47,7 @@ function register(deps) {
     if (pathname === '/api/debug/jsonl-inventory' && req.method === 'GET') {
       var fs = require('node:fs');
       var path = require('node:path');
-      var corsInv = CORS_JSON_NOCACHE;
+      var responseHeadersInventory = JSON_HEADERS_NOCACHE;
       var invUrl = new URL(req.url, 'http://localhost');
       var includeSubagents = (invUrl.searchParams.get('include_subagents') || 'true') !== 'false';
       // Inventory always describes local, read-only scan roots.
@@ -86,7 +86,7 @@ function register(deps) {
         files.push({ path: relPath, absPath: f.path, root: f.label, size: size, mtime: mtime, isSubagent: isSubagent });
       }
 
-      res.writeHead(200, corsInv);
+      res.writeHead(200, responseHeadersInventory);
       res.end(JSON.stringify({ roots: rootSummary, files: files, totalSize: totalSize, totalFiles: files.length }));
       return true;
     }
@@ -94,13 +94,13 @@ function register(deps) {
     // ── /api/debug/jsonl-fingerprint  GET ──
     if (pathname === '/api/debug/jsonl-fingerprint' && req.method === 'GET') {
       var crypto = require('node:crypto');
-      var corsFingerprint = CORS_JSON_NOCACHE;
+      var responseHeadersFingerprint = JSON_HEADERS_NOCACHE;
       var taggedFp = collectTaggedJsonlFiles().tagged;
       var fp = deps.buildSplitFingerprint(taggedFp);
       var stableHash = crypto.createHash('sha256').update(fp.stable).digest('hex').slice(0, 16);
       var volatileHash = crypto.createHash('sha256').update(fp.volatile).digest('hex').slice(0, 16);
       var fullHash = crypto.createHash('sha256').update(fp.full).digest('hex').slice(0, 16);
-      res.writeHead(200, corsFingerprint);
+      res.writeHead(200, responseHeadersFingerprint);
       res.end(JSON.stringify({
         stable: stableHash,
         volatile: volatileHash,

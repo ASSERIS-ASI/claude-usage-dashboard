@@ -22,7 +22,7 @@
 var fs = require('node:fs');
 var path = require('node:path');
 var httpClient = require('../http-client');
-var HOME = require('../../domain/usage/scan-roots').HOME;
+var storagePaths = require('../../domain/usage/storage-paths');
 
 var OUTAGE_API_URL = 'https://status.claude.com/api/v2/incidents.json';
 var OUTAGE_REFRESH_MS = 5 * 60 * 1000;
@@ -31,7 +31,8 @@ var OUTAGE_REFRESH_MS = 5 * 60 * 1000;
 // 'monitoring' offen geparkt bleiben (z.B. eine Modell-Suspension) und sonst
 // jeden Tag bis heute als kritischen Dauerausfall darstellen wuerden.
 var OUTAGE_MAX_OPEN_HOURS = 48;
-var OUTAGE_DISK_CACHE = path.join(HOME, '.claude', 'usage-dashboard-outages.json');
+var OUTAGE_DISK_CACHE = storagePaths.stateFile('outages.json');
+storagePaths.migrateLegacyFileIfMissing(OUTAGE_DISK_CACHE, 'usage-dashboard-outages.json');
 
 // In-memory cache (module-scoped singleton)
 var outageCache = { incidents: [], fetchedAt: 0, error: null };
@@ -69,7 +70,7 @@ function refreshOutageCache(serviceLog, onFetched) {
         fs.writeFileSync(OUTAGE_DISK_CACHE, JSON.stringify({ incidents: data.incidents, fetchedAt: outageCache.fetchedAt }), 'utf8');
         serviceLog.info(
           'outage',
-          'OK incidents=' + data.incidents.length + ' disk=~/.claude/usage-dashboard-outages.json'
+          'OK incidents=' + data.incidents.length + ' disk=' + OUTAGE_DISK_CACHE
         );
       } catch (we) {
         serviceLog.error('outage', 'disk write failed: ' + (we.message || we));

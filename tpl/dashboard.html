@@ -12,12 +12,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Claude Usage Dashboard · Asseris</title>
 <link rel="icon" type="image/svg+xml" href="/assets/img/asseris_favicon.svg">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&display=swap">
+<link rel="stylesheet" href="/assets/cinzel-font.css">
 <link rel="stylesheet" href="/assets/brand-tokens.css">
 <link rel="stylesheet" href="/assets/dashboard.css">
 <style>html{font-size:clamp(14px, 1vw + 10px, 18px)}</style>
-<link rel="stylesheet" href="https://cdn.datatables.net/2.2.2/css/dataTables.dataTables.min.css">
+<link rel="stylesheet" href="/assets/vendor/dataTables.min.css">
 <style>
 .warmup-overlay{position:fixed;inset:0;z-index:99999;background:#0E1116;display:flex;align-items:center;justify-content:center;transition:opacity .5s ease}
 .warmup-overlay.is-done{opacity:0;pointer-events:none}
@@ -35,13 +34,15 @@
 .product-setup-option:hover{border-color:#B8915A;transform:translateY(-1px)}.product-setup-option strong,.product-setup-option span,.product-setup-option em{display:block}
 .product-setup-option.is-selected{border-color:#D4AF7F;background:#252117;box-shadow:0 0 0 1px #B8915A inset}
 .product-setup-option strong{color:#D4AF7F;font-size:1rem}.product-setup-option span{margin-top:8px;color:#B9B0A1;line-height:1.45}.product-setup-option em{margin-top:14px;color:#7DAA85;font-size:.72rem}
+.product-setup-option.is-required{cursor:default}.product-setup-option-head{display:flex!important;align-items:center;gap:9px;margin-top:0!important}.product-setup-option-head input{accent-color:#D4AF7F;margin:0}.product-setup-option-head strong{display:inline!important}.product-setup-option-head small{margin-left:auto;padding:3px 7px;border:1px solid #4A4235;border-radius:999px;color:#B8915A;font-size:.62rem;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+.product-setup-source-paths{display:grid;grid-template-columns:1fr 1fr;gap:12px}.product-setup-source-paths[data-source-paths="meter"]{grid-template-columns:1fr}.product-setup-source-paths[hidden]{display:none}
 .product-setup-path{display:block;color:#A0875E;font-size:.75rem}.product-setup-path input{display:block;width:100%;box-sizing:border-box;margin-top:7px;padding:10px;border:1px solid #343842;border-radius:6px;background:#0E1116;color:#EFE7D6}
 .product-setup-plans{display:flex;gap:18px;flex-wrap:wrap;margin:0 0 20px;padding:14px 16px;border:1px solid #343842;border-radius:8px;color:#D4AF7F}
 .product-setup-plans legend{padding:0 6px;color:#A0875E;font-size:.75rem}.product-setup-plans label{cursor:pointer}.product-setup-plans input{accent-color:#B8915A}
 .product-setup-actions{display:flex;justify-content:space-between;gap:12px;margin-top:22px}.product-setup-actions button,.product-setup-extra button{padding:10px 16px;border:1px solid #B8915A;border-radius:6px;background:#221d15;color:#D4AF7F;cursor:pointer}
 .product-setup-inventory{display:grid;gap:8px;max-height:310px;overflow:auto;margin:18px 0}.product-setup-root{display:flex;align-items:center;gap:9px;padding:11px;border:1px solid #343842;border-radius:7px}.product-setup-root span{margin-left:auto;color:#A0875E;font-size:.72rem}
 .product-setup-subagents{display:block;margin:14px 0;color:#D4AF7F}.product-setup-extra{display:flex;gap:8px}.product-setup-extra input{flex:1;padding:10px;border:1px solid #343842;border-radius:6px;background:#0E1116;color:#EFE7D6}.product-setup-extra-row{padding:7px 10px;margin-top:6px;background:#1A1D24;color:#A0875E;border-radius:5px}
-.product-setup-error{min-height:1em;color:#ef4444}@media(max-width:700px){.product-setup-options{grid-template-columns:1fr}}
+.product-setup-error{min-height:1em;color:#ef4444}@media(max-width:700px){.product-setup-options,.product-setup-source-paths{grid-template-columns:1fr}.product-setup-option-head{align-items:flex-start;flex-wrap:wrap}.product-setup-option-head small{margin-left:24px}}
 </style>
 </head>
 <body>
@@ -626,12 +627,13 @@ __SECTION_SECURITY__
 <div class="tb-preview-body" id="tb-preview-body"></div>
 </div>
 </div>
-<script>globalThis.__I18N_BUNDLES=__I18N_PLACEHOLDER__;globalThis.__APP_VERSION="__APP_VERSION__";</script>
+<script nonce="__CSP_NONCE__">globalThis.__I18N_BUNDLES=__I18N_PLACEHOLDER__;globalThis.__APP_VERSION="__APP_VERSION__";</script>
 <script defer src="/assets/infra/app-logger.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js" crossorigin="anonymous"></script>
-<script defer src="https://cdn.datatables.net/2.2.2/js/dataTables.min.js" crossorigin="anonymous"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js" crossorigin="anonymous"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/marked@15/marked.min.js" crossorigin="anonymous"></script>
+<script defer src="/assets/vendor/dataTables.min.js"></script>
+<script defer src="/assets/vendor/echarts.min.js"></script>
+<script defer src="/assets/vendor/marked.umd.js"></script>
+<script defer src="/assets/vendor/purify.min.js"></script>
+<script defer src="/assets/core/safe-markdown.js"></script>
 <script defer src="/assets/widget-registry.js"></script>
 <!-- Phase 7: page surface modules (register __pages before nav-model reads them) -->
 <script defer src="/assets/pages/overview-page.js"></script>

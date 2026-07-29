@@ -3,14 +3,16 @@
 
 var path = require('node:path');
 var cp = require('node:child_process');
-var os = require('node:os');
+var storagePaths = require('./apps/backend/domain/usage/storage-paths');
 
 process.env.ASSERIS_PRODUCT = 'dashboard';
 
 // Derived state belongs to the standalone product, not to a co-located
 // gateway. Raw Claude JSONL remains shared/read-only; caches do not.
-var productStateDir = process.env.CLAUDE_USAGE_STATE_DIR ||
-  path.join(os.homedir(), '.claude', 'usage-dashboard-product');
+if (!process.env.CLAUDE_USAGE_STATE_DIR && process.env.CLAUDE_USAGE_MIGRATE_LEGACY_STATE == null) {
+  process.env.CLAUDE_USAGE_MIGRATE_LEGACY_STATE = '1';
+}
+var productStateDir = storagePaths.stateDir();
 process.env.CLAUDE_USAGE_STATE_DIR = productStateDir;
 if (!process.env.CLAUDE_USAGE_SESSION_TURNS_CACHE_DIR) {
   process.env.CLAUDE_USAGE_SESSION_TURNS_CACHE_DIR = path.join(productStateDir, 'session-turns');

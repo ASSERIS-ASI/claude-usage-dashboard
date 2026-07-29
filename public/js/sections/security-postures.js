@@ -113,7 +113,6 @@
     charts.timeline = echarts.init(host, null, { renderer: 'canvas' });
     charts.timeline.setOption({
       animation: false,
-      tooltip: { trigger: 'axis' },
       tooltip: { trigger: 'axis', backgroundColor: 'rgba(14,17,22,0.95)', borderColor: '#2A2D34', textStyle: { color: '#F7F3EC' } },
       legend: { data: ['Critical', 'High', 'Medium'], textStyle: { color: '#A0875E' }, bottom: 0 },
       grid: { left: 40, right: 20, top: 20, bottom: 40 },
@@ -155,7 +154,9 @@
     var host = document.getElementById('c-sec-heatmap');
     if (!host || typeof echarts === 'undefined') return;
     if (charts.heatmap) charts.heatmap.dispose();
-    var types = Object.keys(byType).sort();
+    var types = Object.keys(byType).sort(function (left, right) {
+      return left.localeCompare(right);
+    });
     var activeDays = timeline.filter(function (row) { return row.critical + row.high + row.medium > 0; });
     var values = [];
     var max = 1;
@@ -191,17 +192,17 @@
     var host = document.getElementById('sec-events-table-host');
     if (!host) return;
     events.sort(function (left, right) { return String(right.ts).localeCompare(String(left.ts)); });
-    if (typeof jQuery !== 'undefined' && jQuery.fn.DataTable) {
+    if (typeof DataTable !== 'undefined') {
       if (charts.table) charts.table.destroy();
       host.innerHTML = '<style>#sec-events-dt_wrapper .dt-paging{margin-top:15px}</style><table id="sec-events-dt" class="display compact nowrap" style="width:100%;font-size:.65rem"></table>';
       var parentHeight = host.parentElement?.offsetHeight || 600;
-      charts.table = jQuery('#sec-events-dt').DataTable({
+      charts.table = new DataTable('#sec-events-dt', {
         data: events.map(function (event) {
           var color = event.severity === 'critical' ? '#ef4444' : event.severity === 'high' ? '#f59e0b' : '#D4AF7F';
-          var type = String(event.type || '').replace(/_/g, ' ');
+          var type = esc(String(event.type || '').replace(/_/g, ' '));
           if (event.action === 'block') type += ' <span style="color:#ef4444;font-size:.5rem">⛔ BLOCK</span>';
           return [
-            event.ts ? event.ts.slice(0, 19).replace('T', ' ') : event.date,
+            esc(event.ts ? event.ts.slice(0, 19).replace('T', ' ') : event.date),
             '<span style="color:' + color + ';font-weight:700">' + esc(String(event.severity || 'medium').toUpperCase()) + '</span>',
             type,
             '<span style="color:#8C6A3F">JSONL</span>'
@@ -215,7 +216,8 @@
         ],
         autoWidth: false, pageLength: Math.max(5, Math.floor((parentHeight - 88) / 24) - 2),
         lengthChange: false, ordering: true, order: [[0, 'desc']],
-        searching: false, info: false, dom: 'tp', scrollCollapse: true, paging: true
+        searching: false, info: false, scrollCollapse: true, paging: true,
+        layout: { topStart: null, topEnd: null, bottomStart: null, bottomEnd: 'paging' }
       });
       return;
     }

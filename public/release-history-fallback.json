@@ -3,7 +3,7 @@
     "tag_name": "v1.9.0",
     "published_at": "2026-07-29T00:00:00Z",
     "name": "v1.9.0 — Standalone public dashboard",
-    "body": "## Highlights\n\n- Standalone, local and read-only dashboard maintained by Asseris.\n- Claude JSONL, compatible request NDJSON, Cache-Fix and MeterRow v1 adapters.\n- Cost Forensic, multilingual setup and configurable page templates.\n- Explicit public product boundary, version checks, tests and release mirroring.\n\nThe public package contains no proxy runtime, request rewriting, TLS interception, session serializer, remote sync or account control plane."
+    "body": "## Highlights\n\n- Standalone, local and read-only dashboard maintained by Asseris.\n- Claude JSONL, compatible request NDJSON, Cache-Fix and MeterRow v1 adapters.\n- Cost Forensic, multilingual setup and configurable page templates.\n- Version checks, tests and release mirroring."
   },
   {
     "tag_name": "v1.8.3",

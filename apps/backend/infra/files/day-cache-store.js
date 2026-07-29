@@ -21,14 +21,17 @@
 var fs = require('node:fs');
 var path = require('node:path');
 var dayCacheMod = require('../../domain/usage/day-cache-schema');
-var HOME = require('../../domain/usage/scan-roots').HOME;
+var storagePaths = require('../../domain/usage/storage-paths');
 
 // ── Today-Index ──────────────────────────────────────────────────────────
 
 var JSONL_TODAY_INDEX_VERSION = 1;
-var TODAY_INDEX_STATE_DIR = process.env.CLAUDE_USAGE_STATE_DIR ||
-  path.join(HOME, '.claude');
+var TODAY_INDEX_STATE_DIR = storagePaths.stateDir();
 var JSONL_TODAY_INDEX_FILE = path.join(TODAY_INDEX_STATE_DIR, 'usage-dashboard-jsonl-today-index.json');
+storagePaths.migrateLegacyFileIfMissing(
+  JSONL_TODAY_INDEX_FILE,
+  'usage-dashboard-jsonl-today-index.json'
+);
 var TODAY_INDEX_DISABLED =
   process.env.CLAUDE_USAGE_NO_TODAY_INDEX === '1' || process.env.CLAUDE_USAGE_NO_TODAY_INDEX === 'true';
 

@@ -39,7 +39,8 @@ var serviceLog = require('../infra/service-logger');
 
 // ── Config ──────────────────────────────────────────────────────────────
 
-var DASHBOARD_URL = (process.env.CLAUDE_USAGE_DASHBOARD_URL || 'http://localhost:3333').replace(/\/+$/, '');
+var DASHBOARD_URL = process.env.CLAUDE_USAGE_DASHBOARD_URL || 'http://localhost:3333';
+while (DASHBOARD_URL.endsWith('/')) DASHBOARD_URL = DASHBOARD_URL.slice(0, -1);
 var AGENT_PORT = (function () {
   var raw = process.env.CLAUDE_USAGE_JSONL_AGENT_PORT;
   if (raw == null || String(raw).trim() === '') return 3335;
@@ -75,6 +76,7 @@ var SCAN_PARTIAL_EMIT_MIN_MS = 1500;
 // ── Domain modules (same as dashboard-server.js used to load) ───────────
 
 var usageScanRoots = require('../domain/usage/scan-roots');
+var storagePaths = require('../domain/usage/storage-paths');
 var HOME = usageScanRoots.HOME;
 var collectTaggedJsonlFilesAsync = usageScanRoots.collectTaggedJsonlFilesAsync;
 var buildSplitFingerprint = usageScanRoots.buildSplitFingerprint;
@@ -108,9 +110,9 @@ var outageClient = require('../infra/providers/outage-client');
 var releasesClient = require('../infra/providers/github-releases-client');
 var marketplaceClient = require('../infra/providers/marketplace-client');
 
-var JSONL_STATE_DIR = process.env.CLAUDE_USAGE_STATE_DIR ||
-  path.join(HOME, '.claude');
+var JSONL_STATE_DIR = storagePaths.stateDir();
 var JSONL_SCAN_DISK_CACHE = path.join(JSONL_STATE_DIR, 'usage-dashboard-scan.json');
+storagePaths.migrateLegacyFileIfMissing(JSONL_SCAN_DISK_CACHE, 'usage-dashboard-scan.json');
 
 // ── Helpers ─────────────────────────────────────────────────────────────
 
@@ -304,6 +306,7 @@ function runScanAndNotify() {
 // ── Notify Dashboard ────────────────────────────────────────────────────
 
 var { notifyDashboard: _notifyDashboard } = require('../infra/notify-dashboard');
+var isSameOriginRequest = require('../server/security-headers').isSameOriginRequest;
 
 function notifyDashboard() {
   _notifyDashboard(DASHBOARD_URL, 'jsonl', serviceLog);
@@ -312,18 +315,23 @@ function notifyDashboard() {
 // ── HTTP Server (trigger + status) ──────────────────────────────────────
 
 var agentServer = http.createServer(function (req, res) {
-  var cors = { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' };
+  var responseHeaders = { 'Content-Type': 'application/json' };
+  if (!isSameOriginRequest(req)) {
+    res.writeHead(403, responseHeaders);
+    res.end(JSON.stringify({ ok: false, error: 'cross_origin_request_rejected' }));
+    return;
+  }
 
   if (req.url === '/trigger' && req.method === 'POST') {
     serviceLog.info('jsonl-agent', 'trigger received — starting scan');
-    res.writeHead(200, cors);
+    res.writeHead(200, responseHeaders);
     res.end(JSON.stringify({ ok: true, message: 'scan_triggered' }));
     runScanAndNotify();
     return;
   }
 
   if (req.url === '/status') {
-    res.writeHead(200, cors);
+    res.writeHead(200, responseHeaders);
     res.end(JSON.stringify({
       ok: true,
       agent: 'jsonl-agent',
@@ -337,7 +345,7 @@ var agentServer = http.createServer(function (req, res) {
     return;
   }
 
-  res.writeHead(404, cors);
+  res.writeHead(404, responseHeaders);
   res.end(JSON.stringify({ ok: false, error: 'not_found' }));
 });
 agentServer.on('error', function (err) {

@@ -50,9 +50,8 @@ function register(deps) {
   var proxyDayCacheService = deps.proxyDayCacheService;
 
   var RANGE_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-  var RANGE_CORS = {
+  var RANGE_HEADERS = {
     'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
     'Cache-Control': 'no-store, no-cache, must-revalidate',
     Pragma: 'no-cache'
   };
@@ -67,13 +66,13 @@ function register(deps) {
     var to = u.searchParams.get('to') || '';
     var today = new Date().toISOString().slice(0, 10);
     if (!RANGE_DATE_RE.test(from) || !RANGE_DATE_RE.test(to) || from > to) {
-      res.writeHead(400, RANGE_CORS);
+      res.writeHead(400, RANGE_HEADERS);
       res.end(JSON.stringify({ error: 'bad_range' }));
       return null;
     }
     if (to > today) to = today;
     if (from > to) {
-      res.writeHead(400, RANGE_CORS);
+      res.writeHead(400, RANGE_HEADERS);
       res.end(JSON.stringify({ error: 'bad_range' }));
       return null;
     }
@@ -81,7 +80,7 @@ function register(deps) {
       ? Number(process.env.PROXY_RANGE_MAX_DAYS) : 366;
     var span = Math.round((Date.parse(to) - Date.parse(from)) / 86400000) + 1;
     if (span > maxDays) {
-      res.writeHead(400, RANGE_CORS);
+      res.writeHead(400, RANGE_HEADERS);
       res.end(JSON.stringify({ error: 'range_too_large', max_days: maxDays }));
       return null;
     }
@@ -92,7 +91,6 @@ function register(deps) {
     if (pathname === '/api/usage') {
       res.writeHead(200, {
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
         'Cache-Control': 'no-store, no-cache, must-revalidate',
         Pragma: 'no-cache'
       });
@@ -103,7 +101,6 @@ function register(deps) {
     if (pathname === '/api/extension-timeline') {
       res.writeHead(200, {
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
         'Cache-Control': 'no-store, no-cache, must-revalidate',
         Pragma: 'no-cache'
       });
@@ -112,7 +109,7 @@ function register(deps) {
     }
 
     if (pathname === '/api/i18n-bundles') {
-      res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+      res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(buildI18nBundles()));
       return true;
     }
@@ -122,7 +119,6 @@ function register(deps) {
       if (!proxyCache.data) refreshProxyCache();
       res.writeHead(200, {
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
         'Cache-Control': 'no-store, no-cache, must-revalidate',
         Pragma: 'no-cache'
       });
@@ -143,7 +139,8 @@ function register(deps) {
     }
 
     if (pathname === '/api/usage-range') {
-      return handleUsageRange(req, res);
+      handleUsageRange(req, res);
+      return true;
     }
 
     return false;
@@ -157,7 +154,7 @@ function register(deps) {
     var range = parseRangeParams(req, res);
     if (!range) return true;
     if (!proxyDayCacheService) {
-      res.writeHead(503, RANGE_CORS);
+      res.writeHead(503, RANGE_HEADERS);
       res.end(JSON.stringify({ error: 'day_cache_unavailable' }));
       return true;
     }
@@ -176,7 +173,7 @@ function register(deps) {
       }
       serviceLog.info('usage-range', 'proxy-usage-range ' + range.from + '..' + range.to +
         ' → ' + proxyDays.length + ' days, ' + daysMissing.length + ' missing (' + (Date.now() - t0) + 'ms)');
-      res.writeHead(200, RANGE_CORS);
+      res.writeHead(200, RANGE_HEADERS);
       res.end(JSON.stringify({
         from: range.from,
         to: range.to,
@@ -186,7 +183,7 @@ function register(deps) {
       }));
     })().catch(function (err) {
       serviceLog.error('usage-range', 'proxy-usage-range failed: ' + (err.message || err));
-      if (!res.headersSent) res.writeHead(500, RANGE_CORS);
+      if (!res.headersSent) res.writeHead(500, RANGE_HEADERS);
       if (!res.writableEnded) res.end(JSON.stringify({ error: err.message || String(err) }));
     });
     return true;
@@ -196,7 +193,7 @@ function register(deps) {
   // Per-day resolution order: live snapshot → local day cache → days_missing.
   function handleUsageRange(req, res) {
     var range = parseRangeParams(req, res);
-    if (!range) return true;
+    if (!range) return;
     var t0 = Date.now();
     var snapshot = getCachedData() || {};
     var days = (snapshot.days || []).filter(function (d) {
@@ -227,13 +224,15 @@ function register(deps) {
     }
 
     function respond(daysMissing) {
-      var keys = Object.keys(proxyDayByKey).sort();
+      var keys = Object.keys(proxyDayByKey).sort(function (left, right) {
+        return left.localeCompare(right);
+      });
       var proxyDays = keys.map(function (dk) { return proxyDayByKey[dk]; });
       serviceLog.info('usage-range', 'usage-range ' + range.from + '..' + range.to +
         ' → ' + proxyDays.length + ' proxy_days (snapshot=' + sources.snapshot +
         ' local=' + sources.local_cache +
         ') missing=' + daysMissing.length + ' (' + (Date.now() - t0) + 'ms)');
-      res.writeHead(200, RANGE_CORS);
+      res.writeHead(200, RANGE_HEADERS);
       res.end(JSON.stringify({
         from: range.from,
         to: range.to,
@@ -246,7 +245,6 @@ function register(deps) {
     }
 
     respond(missing);
-    return true;
   }
 
   function handleQuotaDivisor(req, res) {
@@ -337,7 +335,7 @@ function register(deps) {
       truncated: requestPairs.length > 2000,
       carryover_q5: carryoverQ5
     };
-    res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-store' });
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
     res.end(JSON.stringify(qdResult));
     return true;
   }
@@ -350,7 +348,6 @@ function register(deps) {
       serviceLog.info('session-turns', 'GET /api/session-turns?date=' + stDate + ' → 0ms (memory cache)');
       res.writeHead(200, {
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
         'Cache-Control': 'no-store, no-cache, must-revalidate',
         Pragma: 'no-cache'
       });
@@ -358,7 +355,6 @@ function register(deps) {
     } else {
       res.writeHead(202, {
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
         'Cache-Control': 'no-store'
       });
       res.end(JSON.stringify({ sessions: [], total_turns: 0, building: true }));

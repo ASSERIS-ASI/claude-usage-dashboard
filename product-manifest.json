@@ -6,18 +6,9 @@
   "included": [
     "local Claude session JSONL scanner",
     "compatible request NDJSON importer",
-    "claude-code-cache-fix MeterRowSchema v1 adapter",
+    "claude-code-cache-fix usage and activity-log adapters",
     "claude-code-meter MeterRowSchema v1 adapter",
     "local layouts, templates, reports and derived caches",
     "German, English and Korean user interface"
-  ],
-  "excluded_runtime": [
-    "forward or reverse proxy",
-    "TLS interception or certificate authority",
-    "session serialization",
-    "request rewriting",
-    "remote synchronization",
-    "authentication or account control plane",
-    "internal deployment configuration"
   ]
 }

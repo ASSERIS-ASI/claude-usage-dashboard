@@ -24,7 +24,7 @@ function register(deps) {
 
   function handle(pathname, req, res) {
     if (pathname === '/api/github-session-sync' && req.method === 'GET') {
-      res.writeHead(204, { 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-store' });
+      res.writeHead(204, { 'Cache-Control': 'no-store' });
       res.end();
       return true;
     }
@@ -34,8 +34,7 @@ function register(deps) {
       res.writeHead(200, {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-        'Access-Control-Allow-Origin': '*'
+        'Connection': 'keep-alive'
       });
       res.write('data: ' + JSON.stringify(getCachedData()) + '\n\n');
       sseClients.push(res);

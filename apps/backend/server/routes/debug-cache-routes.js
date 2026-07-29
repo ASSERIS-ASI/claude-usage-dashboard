@@ -24,7 +24,7 @@ var fs = require('node:fs');
 var path = require('node:path');
 var rh = require('../route-helpers');
 var readJsonBodyMax = rh.readJsonBody;
-var CORS_JSON = rh.CORS_JSON;
+var JSON_HEADERS = rh.JSON_HEADERS;
 
 function register(deps) {
   var serviceLog = deps.serviceLog;
@@ -44,58 +44,54 @@ function register(deps) {
   function handle(pathname, req, res) {
     // ── /api/debug/cache-files  GET ──
     if (pathname === '/api/debug/cache-files' && req.method === 'GET') {
-      var corsCf = CORS_JSON;
+      var responseHeaders = JSON_HEADERS;
       var listCf = collectDebugCacheFilesPayload();
-      res.writeHead(200, corsCf);
+      res.writeHead(200, responseHeaders);
       res.end(JSON.stringify({ ok: true, files: listCf }));
       return true;
     }
 
     // ── /api/debug/cache-file-view  POST+OPTIONS ──
     if (pathname === '/api/debug/cache-file-view') {
-      var corsView = CORS_JSON;
+      var responseHeadersView = JSON_HEADERS;
       if (req.method === 'OPTIONS') {
-        res.writeHead(204, {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type'
-        });
+        res.writeHead(204, { Allow: 'POST, OPTIONS' });
         res.end();
         return true;
       }
       if (req.method !== 'POST') {
-        res.writeHead(405, Object.assign({ Allow: 'POST, OPTIONS' }, corsView));
+        res.writeHead(405, Object.assign({ Allow: 'POST, OPTIONS' }, responseHeadersView));
         res.end(JSON.stringify({ ok: false, error: 'method_not_allowed' }));
         return true;
       }
       readJsonBodyMax(req, 65536, function (errV, bodyV) {
         if (errV && String(errV.message || errV) === 'payload_too_large') {
-          res.writeHead(413, corsView);
+          res.writeHead(413, responseHeadersView);
           res.end(JSON.stringify({ ok: false, error: 'payload_too_large' }));
           return;
         }
         if (errV) {
-          res.writeHead(400, corsView);
+          res.writeHead(400, responseHeadersView);
           res.end(JSON.stringify({ ok: false, error: 'invalid_json' }));
           return;
         }
         var rawPath = bodyV && (bodyV.path_abs || bodyV.path);
         if (!rawPath || typeof rawPath !== 'string') {
-          res.writeHead(400, corsView);
+          res.writeHead(400, responseHeadersView);
           res.end(JSON.stringify({ ok: false, error: 'missing_path' }));
           return;
         }
         var target = path.resolve(rawPath);
 
         if (!debugPathAllowedForRead(target)) {
-          res.writeHead(403, corsView);
+          res.writeHead(403, responseHeadersView);
           res.end(JSON.stringify({ ok: false, error: 'path_not_allowed' }));
           return;
         }
         try {
           var stv = fs.statSync(target);
           if (!stv.isFile()) {
-            res.writeHead(400, corsView);
+            res.writeHead(400, responseHeadersView);
             res.end(JSON.stringify({ ok: false, error: 'not_a_file' }));
             return;
           }
@@ -107,7 +103,7 @@ function register(deps) {
             text += '\n... [truncated, file_bytes=' + buf.length + ' show_max=' + DEBUG_CACHE_FILE_VIEW_MAX_BYTES + ']';
           }
           serviceLog.info('dev', 'cache-file-view ' + displayPathForUi(target) + ' bytes=' + buf.length + (truncated ? ' truncated=1' : ''));
-          res.writeHead(200, corsView);
+          res.writeHead(200, responseHeadersView);
           res.end(JSON.stringify({
             ok: true,
             path_ui: displayPathForUi(target),
@@ -116,7 +112,7 @@ function register(deps) {
             content: text
           }));
         } catch (eV) {
-          res.writeHead(500, corsView);
+          res.writeHead(500, responseHeadersView);
           res.end(JSON.stringify({ ok: false, error: 'read_failed', detail: String(eV && eV.message ? eV.message : eV) }));
         }
       });
@@ -131,7 +127,7 @@ function register(deps) {
       resetScanFingerprints?.();
       serviceLog.info('cache', 'cache-reset via /api/debug/cache-reset — full rescan triggered (fingerprints reset)');
       runScanAndBroadcast();
-      res.writeHead(200, CORS_JSON);
+      res.writeHead(200, JSON_HEADERS);
       res.end(JSON.stringify({ ok: true, message: 'Day cache deleted, full rescan started' }));
       return true;
     }

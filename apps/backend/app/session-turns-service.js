@@ -21,6 +21,7 @@
  */
 var fs = require('fs');
 var path = require('path');
+var storagePaths = require('../domain/usage/storage-paths');
 
 module.exports = function createSessionTurnsService(opts) {
   var serviceLog             = opts.serviceLog;
@@ -45,9 +46,7 @@ module.exports = function createSessionTurnsService(opts) {
     var raw = String(process.env.CLAUDE_USAGE_SESSION_TURNS_CACHE_DIR || '').trim();
     if (raw === '0' || raw === 'off' || raw === 'false') return '';
     if (!raw) {
-      var home = process.env.USERPROFILE || process.env.HOME || require('node:os').homedir();
-      if (!home) return '';
-      return path.join(home, '.claude', 'session-turns-cache');
+      return path.join(storagePaths.stateDir(), 'session-turns-cache');
     }
     try {
       var ex = usageScanRoots.expandUserPath(raw);

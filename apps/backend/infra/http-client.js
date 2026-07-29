@@ -26,17 +26,25 @@ var http = require('node:http');
  * @param {string} urlStr
  * @param {Object} [extraHeaders] - additional headers to send
  * @param {Function} cb - (err, data)
+ * @param {number} [timeoutMs=20000]
  */
-function httpsGetJson(urlStr, extraHeaders, cb) {
+function httpsGetJson(urlStr, extraHeaders, cb, timeoutMs) {
   if (typeof extraHeaders === 'function') {
+    timeoutMs = cb;
     cb = extraHeaders;
     extraHeaders = null;
+  }
+  var finished = false;
+  function done(error, data) {
+    if (finished) return;
+    finished = true;
+    cb(error, data);
   }
   var parsed;
   try {
     parsed = new URL(urlStr);
   } catch (eU) {
-    cb(eU, null);
+    done(eU, null);
     return;
   }
   var headers = Object.create(null);
@@ -58,10 +66,11 @@ function httpsGetJson(urlStr, extraHeaders, cb) {
       try {
         nextUrl = new URL(res.headers.location, urlStr).href;
       } catch (eL) {
-        cb(new Error('bad redirect'), null);
+        done(new Error('bad redirect'), null);
         return;
       }
-      return httpsGetJson(nextUrl, extraHeaders, cb);
+      res.resume();
+      return httpsGetJson(nextUrl, extraHeaders, done, timeoutMs);
     }
     var chunks = [];
     res.on('data', function (c) {
@@ -74,21 +83,22 @@ function httpsGetJson(urlStr, extraHeaders, cb) {
         if (res.statusCode < 200 || res.statusCode >= 300) {
           var msg =
             data && typeof data.message === 'string' ? data.message : 'HTTP ' + res.statusCode;
-          cb(new Error(msg), null);
+          done(new Error(msg), null);
           return;
         }
-        cb(null, data);
+        done(null, data);
       } catch (eJ) {
-        cb(eJ, null);
+        done(eJ, null);
       }
     });
   });
   req.on('error', function (e) {
-    cb(e, null);
+    done(e, null);
   });
-  req.setTimeout(20000, function () {
+  var requestTimeoutMs = Number(timeoutMs) > 0 ? Number(timeoutMs) : 20000;
+  req.setTimeout(requestTimeoutMs, function () {
     req.destroy();
-    cb(new Error('timeout'), null);
+    done(new Error('timeout'), null);
   });
   req.end();
 }

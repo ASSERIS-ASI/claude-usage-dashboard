@@ -34,7 +34,8 @@ var marketplaceClient = require('../infra/providers/marketplace-client');
 
 // ── Config ──────────────────────────────────────────────────────────────
 
-var DASHBOARD_URL = (process.env.CLAUDE_USAGE_DASHBOARD_URL || 'http://localhost:3333').replace(/\/+$/, '');
+var DASHBOARD_URL = process.env.CLAUDE_USAGE_DASHBOARD_URL || 'http://localhost:3333';
+while (DASHBOARD_URL.endsWith('/')) DASHBOARD_URL = DASHBOARD_URL.slice(0, -1);
 
 var OUTAGE_INTERVAL = parseInt(process.env.CLAUDE_USAGE_PROVIDER_OUTAGE_INTERVAL_MS, 10) || 300000;
 var RELEASES_INTERVAL = parseInt(process.env.CLAUDE_USAGE_PROVIDER_RELEASES_INTERVAL_MS, 10) || 3600000;

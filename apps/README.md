@@ -6,7 +6,3 @@
 - `backend/domain`: usage, cache and forensic calculations.
 - `backend/infra`: local persistence and public metadata clients.
 - `backend/server`: local HTTP routes and HTML/static-asset delivery.
-
-The repository intentionally contains no proxy runtime, request rewriting,
-certificate authority, session serializer, remote sync or authentication
-control plane.

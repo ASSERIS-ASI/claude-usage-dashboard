@@ -24,11 +24,11 @@
  */
 var fs = require('node:fs');
 var path = require('node:path');
-var HOME = require('../../domain/usage/scan-roots').HOME;
+var storagePaths = require('../../domain/usage/storage-paths');
 
-var JSONL_STATE_DIR = process.env.CLAUDE_USAGE_STATE_DIR ||
-  path.join(HOME, '.claude');
+var JSONL_STATE_DIR = storagePaths.stateDir();
 var JSONL_SCAN_DISK_CACHE = path.join(JSONL_STATE_DIR, 'usage-dashboard-scan.json');
+storagePaths.migrateLegacyFileIfMissing(JSONL_SCAN_DISK_CACHE, 'usage-dashboard-scan.json');
 
 // In-memory cache (module-scoped singleton)
 var scanCache = { data: null, fetchedAt: 0 };

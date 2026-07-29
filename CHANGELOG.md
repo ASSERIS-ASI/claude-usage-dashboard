@@ -3,6 +3,47 @@
 All notable changes to the standalone public Claude Usage Dashboard are
 documented here.
 
+## Unreleased
+
+### Security
+
+- Restricted browser API requests to the dashboard origin and removed wildcard
+  CORS responses from local data endpoints.
+- Added nonce-bound Content Security Policy, frame denial, MIME-sniffing
+  protection, referrer policy and permissions policy.
+- Replaced browser CDNs with pinned, locally served dependencies and upgraded
+  Apache ECharts to the security-fixed 6.1.0 release.
+- Upgraded to native DataTables 3, removed the jQuery runtime, and upgraded
+  Marked to 18 with DOMPurify sanitization for rendered Markdown.
+
+### Changed
+
+- Made published Gitea releases published to GitHub the canonical source for the
+  in-dashboard release history, with a persistent local cache and immutable
+  predecessor fallback for offline use.
+- Standardized the supported runtime on the Node.js 24 LTS release line.
+- Added a dashboard-only Jenkins pipeline with fail-closed CI, dependency
+  auditing, SonarQube analysis, Quality Gate enforcement, immutable container
+  publishing and Kubernetes rollout.
+- Added a dedicated Kubernetes dashboard stack that keeps runtime state on its
+  own PVC and exposes only the dashboard HTTP port.
+- Documented the read-only `claude-code-cache-fix` combination, including its
+  imported telemetry, session-log complement and unavailable fields.
+- Consolidated writable derived data under `CLAUDE_USAGE_STATE_DIR`.
+- Added a guarded, one-time migration for earlier caches, layouts and custom
+  templates without re-importing them after a later layout reset.
+- Fixed restored Settings sidebars rendering an empty template list before
+  persisted preferences had finished loading.
+- Updated the container to separate read-only Claude inputs from writable
+  dashboard state and document loopback-only port publishing.
+- Completed Korean translation-key parity and made the first-run setup switch
+  between German, English and Korean.
+
+### Fixed
+
+- Kept the Release Notes action functional after the Settings sidebar replaces
+  its rendered controls.
+
 ## [1.9.0] - 2026-07-29
 
 ### Added
@@ -12,9 +53,8 @@ documented here.
   `claude-code-cache-fix` telemetry and MeterRowSchema v1.
 - Local setup flow, multilingual UI, configurable page templates and
   cost-forensic reports.
-- Version consistency checks, public-boundary checks, unit tests and runtime
-  smoke tests.
-- Gitea CI plus verified `main` and release-tag mirroring to GitHub.
+- Version consistency checks, unit tests and runtime smoke tests.
+- Automated CI plus verified `main` and release-tag publishing to GitHub.
 
 ### Changed
 
@@ -23,12 +63,6 @@ documented here.
   offline.
 - The package and repository metadata now point to
   `ASSERIS-ASI/claude-usage-dashboard`.
-
-### Removed
-
-- Proxy execution, request rewriting, TLS interception, session serialization,
-  remote synchronization, authentication control-plane and internal deployment
-  configuration.
 
 ## Predecessor release lineage
 
@@ -60,7 +94,7 @@ standalone Asseris continuation:
 
 Those historical tags remain attached to the
 [predecessor repository](https://github.com/fgrosswig/claude-usage-dashboard/releases).
-They are deliberately not retargeted to the sanitized repository. The
+They are deliberately not retargeted to the continuation repository. The
 predecessor `v1.8.4` entry was a draft rather than a published release.
 
 [1.9.0]: https://github.com/ASSERIS-ASI/claude-usage-dashboard/releases/tag/v1.9.0

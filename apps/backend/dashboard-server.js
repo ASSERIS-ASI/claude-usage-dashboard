@@ -11,7 +11,7 @@
 // Usage: node dashboard.js [--port=3333] [--refresh=SECONDS] [--no-cache]
 // --refresh = voller Daten-Scan + SSE (Standard 180s, Minimum 60s). Kurze Werte lesen alle JSONL unnötig oft neu ein.
 // CLAUDE_USAGE_WALK_SLICE=N (5–500): größer = schnellere Projektbaum-Ermittlung, kleiner = responsiver direkt nach Start (Default 40 readdir/Tick).
-// Tages-Cache: ~/.claude/usage-dashboard-days.json (Vortage). Bei passender jsonl-Anzahl nur noch „heute“ aus JSONL.
+// Tages-Cache: derived state directory (Vortage). Bei passender jsonl-Anzahl nur noch „heute“ aus JSONL.
 // Vollscan erzwingen: CLAUDE_USAGE_NO_CACHE=1  oder  Cache-Datei löschen / neue .jsonl-Datei ändert die Anzahl.
 // full_jsonl-Grund im Log: siehe scan-Zeile "day_cache_miss …". Identischen JSONL-Scan (Fingerprint mtime+size) standardmaessig ueberspringen wenn unveraendert — sonst bei vielen .jsonl Dauer-„Loading …/N“ + hohe Last. Abschalten: CLAUDE_USAGE_SKIP_IDENTICAL_SCAN=0
 // Marketplace POST-Timeout ms: CLAUDE_USAGE_MARKETPLACE_TIMEOUT_MS (3000-120000, Default 12000).
@@ -178,7 +178,7 @@ process.argv.forEach(function(a) {
 serviceLog.refreshFromEnv();
 
 // ── Outage disk cache path (used in state-paths display + deps) ──────────
-var OUTAGE_DISK_CACHE = path.join(HOME, '.claude', 'usage-dashboard-outages.json');
+var OUTAGE_DISK_CACHE = outageClient.OUTAGE_DISK_CACHE;
 
 // SCAN_FILES_PER_TICK, SCAN_PARTIAL_EMIT_MIN_MS: moved to app/usage-scan-orchestrator.js (Phase 19)
 

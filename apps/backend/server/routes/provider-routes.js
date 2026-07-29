@@ -20,7 +20,7 @@
  * after they have refreshed a disk cache. Reloads the
  * in-memory cache from disk and triggers SSE broadcast.
  */
-var CORS_JSON = require('../route-helpers').CORS_JSON;
+var JSON_HEADERS = require('../route-helpers').JSON_HEADERS;
 
 module.exports = function createProviderRoutes(opts) {
   var serviceLog = opts.serviceLog;
@@ -36,20 +36,20 @@ module.exports = function createProviderRoutes(opts) {
   function handle(pathname, req, res) {
     if (pathname !== '/api/provider-notify' || req.method !== 'POST') return false;
 
-    var cors = CORS_JSON;
+    var responseHeaders = JSON_HEADERS;
     var chunks = [];
     req.on('data', function (c) { chunks.push(c); });
     req.on('end', function () {
       var body;
       try { body = JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch (e) {
-        res.writeHead(400, cors);
+        res.writeHead(400, responseHeaders);
         res.end(JSON.stringify({ ok: false, error: 'invalid_json' }));
         return;
       }
 
       var source = body.source;
       if (!source || !['outage', 'releases', 'marketplace', 'jsonl'].includes(source)) {
-        res.writeHead(400, cors);
+        res.writeHead(400, responseHeaders);
         res.end(JSON.stringify({ ok: false, error: 'invalid_source', expected: 'outage|releases|marketplace|jsonl' }));
         return;
       }
@@ -82,7 +82,7 @@ module.exports = function createProviderRoutes(opts) {
         }
       }
 
-      res.writeHead(200, cors);
+      res.writeHead(200, responseHeaders);
       res.end(JSON.stringify({ ok: true, source: source, reloaded: reloaded }));
     });
 

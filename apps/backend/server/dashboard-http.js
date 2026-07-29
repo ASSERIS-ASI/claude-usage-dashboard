@@ -14,8 +14,8 @@
  * @asseris-emits        static asset bytes + Content-Type header
  * @asseris-consumes     ./public/* filesystem, request URL pathname
  *
- * HTTP helpers for the usage dashboard: static assets under /assets/ (served from ./public).
- * Paths are whitelisted; no directory traversal.
+ * HTTP helpers for the usage dashboard: static assets under /assets/.
+ * Application and pinned dependency paths are explicitly whitelisted.
  */
 var fs = require('node:fs');
 var path = require('node:path');
@@ -26,13 +26,14 @@ var MIME = {
   '.json': 'application/json; charset=utf-8',
   '.svg': 'image/svg+xml',
   '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg'
+  '.jpeg': 'image/jpeg',
+  '.woff2': 'font/woff2'
 };
 
 /** pathname -> path segments relative to script root (must stay under public/) */
 var ASSET_ROUTES = {
-  '/assets/release-history.json': ['public', 'release-history.json'],
   '/assets/brand-tokens.css': ['public', 'css', 'brand-tokens.css'],
+  '/assets/cinzel-font.css': ['public', 'css', 'cinzel-font.css'],
   '/assets/dashboard.css': ['public', 'css', 'dashboard.css'],
   '/assets/img/asseris_favicon.svg': ['public', 'img', 'asseris_favicon.svg'],
   '/assets/img/asseris_logo_horizontal_TM.svg': ['public', 'img', 'asseris_logo_horizontal_TM.svg'],
@@ -92,6 +93,7 @@ var ASSET_ROUTES = {
   '/assets/core/dashboard-renderer.js': ['public', 'js', 'core', 'dashboard-renderer.js'],
   '/assets/core/dashboard-boot.js':     ['public', 'js', 'core', 'dashboard-boot.js'],
   '/assets/core/ui-utils.js':           ['public', 'js', 'core', 'ui-utils.js'],
+  '/assets/core/safe-markdown.js':      ['public', 'js', 'core', 'safe-markdown.js'],
   '/assets/core/dashboard-utils.js':   ['public', 'js', 'core', 'dashboard-utils.js'],
   '/assets/core/tooltips-ko.js':       ['public', 'js', 'core', 'tooltips-ko.js'],
   // Phase 18d: intelligence section
@@ -103,6 +105,23 @@ var ASSET_ROUTES = {
   '/assets/widgets/dispatcher-init.js':       ['public', 'js', 'widgets', 'dispatcher-init.js']
 };
 
+/** pathname -> exact dependency package + path */
+var VENDOR_ASSET_ROUTES = {
+  '/assets/vendor/dataTables.min.js': { package: 'datatables.net', path: ['js', 'dataTables.min.js'] },
+  '/assets/vendor/dataTables.min.css': { package: 'datatables.net-dt', path: ['css', 'dataTables.dataTables.min.css'] },
+  '/assets/vendor/echarts.min.js': { package: 'echarts', path: ['dist', 'echarts.min.js'] },
+  '/assets/vendor/marked.umd.js': { package: 'marked', path: ['lib', 'marked.umd.js'] },
+  '/assets/vendor/purify.min.js': { resolve: 'dompurify/purify.min.js' },
+  '/assets/vendor/cinzel-latin-400-normal.woff2': {
+    package: '@fontsource/cinzel',
+    path: ['files', 'cinzel-latin-400-normal.woff2']
+  },
+  '/assets/vendor/cinzel-latin-600-normal.woff2': {
+    package: '@fontsource/cinzel',
+    path: ['files', 'cinzel-latin-600-normal.woff2']
+  }
+};
+
 function isPathInsideDir(filePath, dir) {
   var d = path.resolve(dir);
   var f = path.resolve(filePath);
@@ -112,10 +131,33 @@ function isPathInsideDir(filePath, dir) {
 
 function resolveWhitelistedAsset(scriptDir, pathname) {
   var segs = ASSET_ROUTES[pathname];
-  if (!segs) return null;
-  var full = path.normalize(path.join.apply(path, [scriptDir].concat(segs)));
-  var pubRoot = path.join(scriptDir, 'public');
-  if (!isPathInsideDir(full, pubRoot)) return null;
+  var allowedRoot = path.join(scriptDir, 'public');
+  if (!segs) {
+    var vendor = VENDOR_ASSET_ROUTES[pathname];
+    if (!vendor) return null;
+    if (vendor.resolve) {
+      try {
+        var resolved = require.resolve(vendor.resolve, { paths: [scriptDir] });
+        if (!fs.statSync(resolved).isFile()) return null;
+        return resolved;
+      } catch (_directError) {
+        return null;
+      }
+    }
+    try {
+      allowedRoot = path.dirname(require.resolve(vendor.package + '/package.json', {
+        paths: [scriptDir]
+      }));
+    } catch (_error) {
+      return null;
+    }
+    segs = vendor.path;
+  }
+  var isPublicAsset = ASSET_ROUTES[pathname] != null;
+  var full = path.normalize(path.join.apply(path, [allowedRoot].concat(
+    isPublicAsset ? segs.slice(1) : segs
+  )));
+  if (!isPathInsideDir(full, allowedRoot)) return null;
   try {
     if (!fs.statSync(full).isFile()) return null;
   } catch (e) {
@@ -164,6 +206,7 @@ function requestPathname(reqUrl) {
 
 module.exports = {
   ASSET_ROUTES: ASSET_ROUTES,
+  VENDOR_ASSET_ROUTES: VENDOR_ASSET_ROUTES,
   tryServeDashboardAsset: tryServeDashboardAsset,
   requestPathname: requestPathname,
   resolveWhitelistedAsset: resolveWhitelistedAsset

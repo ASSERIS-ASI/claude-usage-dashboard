@@ -25,6 +25,10 @@
     return global.__widgetDispatcher ? global.__widgetDispatcher.getSortedSections() : [];
   }
 
+  function compareIds(left, right) {
+    return left.localeCompare(right);
+  }
+
   function idOccursInWidgetList(widgetsArr, id) {
     if (!widgetsArr || !id) return false;
     for (var w of widgetsArr) {
@@ -138,8 +142,8 @@
     var u;
     for (u = 0; u < notInWidgets.length; u++) nextMap[notInWidgets[u]] = true;
     for (u = 0; u < checkboxHiddenInLayout.length; u++) nextMap[checkboxHiddenInLayout[u]] = true;
-    var next = Object.keys(nextMap).sort();
-    var cur = curHs.slice().sort();
+    var next = Object.keys(nextMap).sort(compareIds);
+    var cur = curHs.slice().sort(compareIds);
     if (cur.length !== next.length) {
       global.__prefsStore.setHiddenSections(next);
       return true;

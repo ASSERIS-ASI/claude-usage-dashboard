@@ -315,9 +315,13 @@
     }
     // Release Notes button
     var relBtn = document.getElementById('sidebar-release-btn');
-    if (relBtn && !relBtn.dataset.bound) {
-      relBtn.dataset.bound = '1';
-      relBtn.addEventListener('click', function () {
+    if (relBtn && !global.__releaseNotesClickBound) {
+      global.__releaseNotesClickBound = true;
+      global.addEventListener('click', function (event) {
+        var clicked = event.target && event.target.closest
+          ? event.target.closest('#sidebar-release-btn')
+          : null;
+        if (!clicked) return;
         // Try direct expand button first, fall back to opening modal directly
         var origBtn = document.getElementById('live-rel-expand-btn');
         if (origBtn) { origBtn.click(); return; }
@@ -345,7 +349,7 @@
         if (relBody && !relBody.dataset.loaded) {
           relBody.innerHTML = '<p style="color:#8C6A3F;font-size:.75rem">Loading releases...</p>';
           var xhr = new XMLHttpRequest();
-          xhr.open('GET', '/assets/release-history.json', true);
+          xhr.open('GET', '/api/release-history', true);
           xhr.onload = function () {
             if (xhr.status !== 200) { relBody.innerHTML = '<p style="color:#ef4444">Failed to load releases</p>'; return; }
             try {
@@ -356,9 +360,11 @@
                 var rel = releases[i];
                 var rDate = rel.published_at ? rel.published_at.slice(0, 10) : '';
                 html += '<details class="release-modal-item"' + (i === 0 ? ' open' : '') + '>';
-                html += '<summary class="release-modal-item-head"><span class="rel-tag">' + rel.tag_name + '</span> <span class="rel-date">' + rDate + '</span></summary>';
-                var rawBody = (rel.body || '').replace(/^## .+\n?/m, '');
-                var bodyHtml = marked.parse(rawBody);
+                html += '<summary class="release-modal-item-head"><span class="rel-tag">' +
+                  global.__safeMarkdown.escapeHtml(rel.tag_name) + '</span> <span class="rel-date">' +
+                  global.__safeMarkdown.escapeHtml(rDate) + '</span></summary>';
+                var rawBody = rel.body || '';
+                var bodyHtml = global.renderSafeMarkdown(rawBody);
                 html += '<div class="release-modal-item-body">' + bodyHtml + '</div></details>';
               }
               relBody.innerHTML = html;
@@ -367,10 +373,15 @@
           };
           xhr.send();
         }
-      });
+      }, true);
     }
     // Gateway badge — fetch status + bind click toggle
     initGatewayBadge();
+    // The sidebar can be restored from localStorage before preferences and
+    // template-builder helpers have finished initializing. Render once more
+    // after synchronous layout loading so persisted templates never leave an
+    // already-open Templates panel empty.
+    if (global.__settingsSidebar) global.__settingsSidebar.renderTemplatesSection();
   }
 
   // ── Expose ─────────────────────────────────────────────────────

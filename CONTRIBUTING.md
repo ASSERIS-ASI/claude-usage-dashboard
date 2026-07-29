@@ -2,7 +2,7 @@
 
 1. Create a focused branch.
 2. Keep all evidence adapters read-only.
-3. Add synthetic fixtures only; never commit real session or proxy logs.
+3. Add synthetic fixtures only; never commit real session or request telemetry.
 4. Run:
 
    ```bash
@@ -10,8 +10,19 @@
    npm run ci
    ```
 
-5. Open a pull request describing user-visible changes and data assumptions.
+5. Open a pull request or issue in the
+   [public GitHub repository](https://github.com/ASSERIS-ASI/claude-usage-dashboard)
+   describing user-visible changes and data assumptions.
 
-Contributions must preserve the public-product boundary: no traffic proxy,
-request rewriting, certificate interception, account control, remote log sync
-or private deployment configuration.
+Contributions must keep all source adapters read-only, local-first and covered
+by synthetic fixtures and tests.
+
+## Maintainer release flow
+
+A verified push to `main` derives the next semantic version from conventional
+commit subjects, creates the tag and opens a **draft** in Gitea. The workflow
+never publishes that draft. A maintainer reviews, edits and publishes it in the
+maintainer release UI; only that publication is published to GitHub.
+
+Release text is generated from Git history. Do not add per-release Markdown
+files to the repository.

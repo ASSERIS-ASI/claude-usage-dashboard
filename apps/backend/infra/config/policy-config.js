@@ -18,7 +18,7 @@
 var DEFAULT_SECURITY_POLICIES = [
   { id: 'sudo_escalation', severity: 'high', pattern: '\\bsudo\\b', pre: 'sudo' },
   { id: 'no_verify', severity: 'medium', pattern: '--no-verify', pre: '--no-verify' },
-  { id: 'credential_in_command', severity: 'critical', pattern: '(?:password=|passwd=|PGPASSWORD=|docker-password|from-literal[^\\n]{0,40}(?:password|secret)|basic_auth)', cmdOnly: true },
+  { id: 'credential_in_command', severity: 'critical', pattern: '(?:pass(?:word|wd)=|PGPASS(?:WORD)?=|docker-pass(?:word)?|from-literal[^\\n]{0,40}(?:pass(?:word|wd)|secret)|basic_auth)', cmdOnly: true },
   { id: 'token_in_command', severity: 'critical', pattern: '(?:Authorization[^\\n]{0,20}Bearer\\s+[A-Za-z0-9_\\-]{32,}|api_key=[A-Za-z0-9_\\-]{20,}|api-key=[A-Za-z0-9_\\-]{20,}|token=[A-Za-z0-9_\\-]{32,})', cmdOnly: true },
   { id: 'private_key', severity: 'critical', pattern: 'BEGIN[A-Z ]{0,30}PRIVATE KEY', pre: 'PRIVATE', cmdOnly: false },
   { id: 'inline_credential_url', severity: 'critical', pattern: 'https?:\\/\\/[A-Za-z0-9_]+:[A-Za-z0-9_\\-!@#$%^&*]{6,}@', pre: '://', cmdOnly: true },

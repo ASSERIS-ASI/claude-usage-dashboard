@@ -24,14 +24,14 @@ var fs = require('node:fs');
 var path = require('node:path');
 var httpClient = require('../http-client');
 var httpsGetJson = httpClient.httpsGetJson;
-var scanRoots = require('../../domain/usage/scan-roots');
-var HOME = scanRoots.HOME;
+var storagePaths = require('../../domain/usage/storage-paths');
 var buildSnapshot = require('../../app/build-usage-snapshot');
 var normalizeCliSemver = buildSnapshot.normalizeCliSemver;
 var semverCmp = buildSnapshot.semverCmp;
 
 // ── Constants ──────────────────────────────────────────────────────────────
-var RELEASES_CACHE = path.join(HOME, '.claude', 'claude-code-releases.json');
+var RELEASES_CACHE = storagePaths.stateFile('claude-code-releases.json');
+storagePaths.migrateLegacyFileIfMissing(RELEASES_CACHE, 'claude-code-releases.json');
 var RELEASES_API_URL = 'https://api.github.com/repos/anthropics/claude-code/releases?per_page=100';
 
 /** Pause zwischen GitHub-Release-Backfill-Requests (ms), 0-5000. */
@@ -327,7 +327,7 @@ function maybeRefreshReleasesCacheOnStartup(serviceLog) {
       'releases',
       'GitHub fetch übersprungen (' +
         releasesCache.releases.length +
-        ' Releases aus ~/.claude/claude-code-releases.json); manuell: POST /api/github-releases-refresh oder start mit CLAUDE_USAGE_GITHUB_RELEASES_FETCH=1'
+        ' Releases aus dem lokalen Metadaten-Cache); manuell: POST /api/github-releases-refresh oder Start mit CLAUDE_USAGE_GITHUB_RELEASES_FETCH=1'
     );
   }
 }

@@ -9,13 +9,12 @@
  */
 var fs = require('node:fs');
 var path = require('node:path');
-var usageScanRoots = require('./scan-roots');
-var HOME = usageScanRoots.HOME;
+var storagePaths = require('./storage-paths');
 
 var USAGE_DAY_CACHE_VERSION = 7; // bumped: entrypoints per version in version_stats
-var USAGE_STATE_DIR = process.env.CLAUDE_USAGE_STATE_DIR ||
-  path.join(HOME, '.claude');
+var USAGE_STATE_DIR = storagePaths.stateDir();
 var USAGE_DAY_CACHE_FILE = path.join(USAGE_STATE_DIR, 'usage-dashboard-days.json');
+storagePaths.migrateLegacyFileIfMissing(USAGE_DAY_CACHE_FILE, 'usage-dashboard-days.json');
 
 function readUsageDayCache() {
   try {

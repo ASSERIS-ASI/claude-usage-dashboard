@@ -1,7 +1,7 @@
 'use strict';
 /**
  * @asseris-module       Route Helpers
- * @asseris-description  Shared utilities for route modules — frozen CORS+JSON headers,
+ * @asseris-description  Shared utilities for route modules — frozen JSON headers,
  *                       common error responders, body parsers. Pure utility, no framework.
  * @asseris-pillar       infra
  * @asseris-domain       helper-utils
@@ -10,21 +10,19 @@
  * @asseris-anchor       —
  * @asseris-calls        —
  * @asseris-called-by    Debug Cache Routes, Debug JSONL Routes, Debug Routes, Provider Notify Route, Sync Routes
- * @asseris-emits        CORS_JSON headers constant, error-response helpers
+ * @asseris-emits        JSON headers constants, error-response helpers
  * @asseris-consumes     —
  *
  * Shared helpers for route modules — eliminates repeated boilerplate.
  * No framework, no middleware stack, just utility functions.
  */
 
-/** Frozen CORS + JSON headers (safe as Object.assign source). */
-var CORS_JSON = Object.freeze({
-  'Access-Control-Allow-Origin': '*',
+/** Frozen JSON headers (safe as Object.assign source). */
+var JSON_HEADERS = Object.freeze({
   'Content-Type': 'application/json'
 });
 
-var CORS_JSON_NOCACHE = Object.freeze({
-  'Access-Control-Allow-Origin': '*',
+var JSON_HEADERS_NOCACHE = Object.freeze({
   'Content-Type': 'application/json',
   'Cache-Control': 'no-store'
 });
@@ -72,4 +70,4 @@ function sendJson(res, status, data, extraHeaders) {
   res.end(JSON.stringify(data));
 }
 
-module.exports = { CORS_JSON, CORS_JSON_NOCACHE, readJsonBody, sendJson };
+module.exports = { JSON_HEADERS, JSON_HEADERS_NOCACHE, readJsonBody, sendJson };

@@ -19,3 +19,11 @@ include real Claude session logs, API keys, cookies or account identifiers.
 The server binds to `127.0.0.1` by default and has no authentication layer.
 Only bind it to another interface when the surrounding network/container
 provides an appropriate access-control boundary.
+
+Browser API requests are restricted to the dashboard origin. Responses use a
+nonce-bound Content Security Policy, deny framing and disable MIME sniffing.
+Browser libraries and fonts are served locally from pinned dependencies.
+
+Keep the source-log directories readable only by the account running the
+dashboard. Put writable derived state in `CLAUDE_USAGE_STATE_DIR`; for
+containers, mount source logs read-only and use a separate state volume.

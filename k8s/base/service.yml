@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: claude-app
+  labels:
+    app.kubernetes.io/name: claude-usage-dashboard
+    app.kubernetes.io/component: dashboard
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: claude-usage-dashboard
+    app.kubernetes.io/component: dashboard
+  ports:
+    - name: http
+      port: 3333
+      targetPort: http
+      nodePort: 31333
+      protocol: TCP

@@ -167,8 +167,8 @@
     if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null; }
   }
 
-  var _origSetLang = setLang;
-  setLang = function (code) {
+  var _origSetLang = globalThis.setLang;
+  globalThis.setLang = function (code) {
     stopObserver();
     removeAllTips();
     _origSetLang(code);
@@ -178,7 +178,7 @@
     }
   };
 
-  if (getLang() === "ko") {
+  if (globalThis.getLang() === "ko") {
     setTimeout(function () {
       scanElement(document.body);
       startObserver();

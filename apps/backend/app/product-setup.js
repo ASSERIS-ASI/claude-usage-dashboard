@@ -3,10 +3,10 @@
 var fs = require('node:fs');
 var os = require('node:os');
 var path = require('node:path');
+var storagePaths = require('../domain/usage/storage-paths');
 
 function stateDir() {
-  return process.env.CLAUDE_USAGE_STATE_DIR ||
-    path.join(os.homedir(), '.claude', 'usage-dashboard-product');
+  return storagePaths.stateDir();
 }
 
 function setupFile() {
@@ -44,6 +44,12 @@ var DEFAULT_MODEL_COLORS = Object.freeze({
   fable: '#ec4899'
 });
 
+var DEFAULT_SOURCES = Object.freeze({
+  claude_jsonl: true,
+  cache_fix: false,
+  meter: false
+});
+
 function modelColors(value) {
   var source = value && typeof value === 'object' ? value : {};
   var result = {};
@@ -56,11 +62,56 @@ function modelColors(value) {
   return result;
 }
 
+function sourcesFromLegacyMode(mode) {
+  if (mode === 'cache-fix') {
+    return { claude_jsonl: true, cache_fix: true, meter: false };
+  }
+  if (mode === 'meter') {
+    return { claude_jsonl: true, cache_fix: false, meter: true };
+  }
+  if (mode === 'combined') {
+    return { claude_jsonl: true, cache_fix: true, meter: true };
+  }
+  if (mode === 'local') {
+    return { ...DEFAULT_SOURCES };
+  }
+  return null;
+}
+
+function normalizeSources(value) {
+  var configured = value?.sources;
+  if (configured && typeof configured === 'object' && !Array.isArray(configured)) {
+    return {
+      claude_jsonl: true,
+      cache_fix: configured.cache_fix === true,
+      meter: configured.meter === true
+    };
+  }
+  return sourcesFromLegacyMode(value?.mode);
+}
+
+function legacyMode(sources) {
+  if (sources.cache_fix && sources.meter) return 'combined';
+  if (sources.cache_fix) return 'cache-fix';
+  if (sources.meter) return 'meter';
+  return 'local';
+}
+
+function sourceEnabled(setup, source) {
+  var sources = normalizeSources(setup);
+  return sources ? sources[source] === true : false;
+}
+
 function read() {
   try {
     var value = JSON.parse(fs.readFileSync(setupFile(), 'utf8'));
-    if (!['local', 'cache-fix', 'meter'].includes(value?.mode)) return null;
-    return value;
+    var sources = normalizeSources(value);
+    if (!sources) return null;
+    return {
+      ...value,
+      sources: sources,
+      mode: legacyMode(sources)
+    };
   } catch (error) {
     if (error?.code !== 'ENOENT') throw error;
     return null;
@@ -69,12 +120,17 @@ function read() {
 
 function status() {
   var setup = read();
+  var sources = setup?.sources || { ...DEFAULT_SOURCES };
   var cacheFixPath = setup?.cache_fix_usage || defaultCacheFixPath();
   var meterPath = setup?.meter_usage || defaultMeterPath();
   var cacheFixDebugPath = setup?.cache_fix_debug || defaultCacheFixDebugPath();
   return {
     configured: !!setup,
-    mode: setup?.mode || null,
+    mode: setup ? legacyMode(sources) : null,
+    sources: sources,
+    enabled_sources: Object.keys(sources).filter(function (source) {
+      return sources[source] === true;
+    }),
     subscription: setup?.subscription || null,
     language: setup?.language || null,
     log_roots: setup?.log_roots || [],
@@ -86,15 +142,15 @@ function status() {
     cache_fix_debug_detected: fs.existsSync(cacheFixDebugPath),
     meter_usage: meterPath,
     meter_detected: fs.existsSync(meterPath),
-    supported_modes: ['local', 'cache-fix', 'meter']
+    supported_sources: ['claude_jsonl', 'cache_fix', 'meter']
   };
 }
 
 function write(input) {
-  var mode = input?.mode;
-  if (!['local', 'cache-fix', 'meter'].includes(mode)) {
-    var invalid = new Error('mode must be local, cache-fix or meter');
-    invalid.code = 'INVALID_MODE';
+  var sources = normalizeSources(input);
+  if (!sources) {
+    var invalid = new Error('sources must select Claude JSONL and may enable Cache Fix and Claude Code Meter');
+    invalid.code = 'INVALID_SOURCES';
     throw invalid;
   }
   var subscription = String(input?.subscription || '').toLowerCase();
@@ -125,8 +181,9 @@ function write(input) {
     try { return fs.statSync(root).isDirectory(); } catch (error) { return false; }
   })));
   var setup = {
-    version: 1,
-    mode: mode,
+    version: 2,
+    mode: legacyMode(sources),
+    sources: sources,
     subscription: subscription,
     language: language,
     cache_fix_usage: cacheFixPath,
@@ -142,10 +199,12 @@ function write(input) {
   var temporary = target + '.tmp';
   fs.writeFileSync(temporary, JSON.stringify(setup, null, 2), 'utf8');
   fs.renameSync(temporary, target);
-  process.env.CLAUDE_USAGE_SOURCE_MODE = mode;
-  if (mode === 'cache-fix') process.env.CACHE_FIX_USAGE_LOG = cacheFixPath;
-  if (mode === 'cache-fix') process.env.CACHE_FIX_DEBUG_LOG = cacheFixDebugPath;
-  if (mode === 'meter') process.env.CLAUDE_METER_LOG = meterPath;
+  process.env.CLAUDE_USAGE_SOURCE_MODE = legacyMode(sources);
+  process.env.CLAUDE_USAGE_CACHE_FIX_ENABLED = sources.cache_fix ? '1' : '0';
+  process.env.CLAUDE_USAGE_METER_ENABLED = sources.meter ? '1' : '0';
+  if (sources.cache_fix) process.env.CACHE_FIX_USAGE_LOG = cacheFixPath;
+  if (sources.cache_fix) process.env.CACHE_FIX_DEBUG_LOG = cacheFixDebugPath;
+  if (sources.meter) process.env.CLAUDE_METER_LOG = meterPath;
   return status();
 }
 
@@ -155,6 +214,8 @@ module.exports = {
   defaultCacheFixPath: defaultCacheFixPath,
   defaultMeterPath: defaultMeterPath,
   defaultCacheFixDebugPath: defaultCacheFixDebugPath,
+  normalizeSources: normalizeSources,
+  sourceEnabled: sourceEnabled,
   read: read,
   status: status,
   write: write

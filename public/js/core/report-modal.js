@@ -466,8 +466,8 @@
     if (!window.__dashboardState.getData()?.days?.length) return;
     __lastReportMd = generateForensicReportMd(window.__dashboardState.getData());
     var el = document.getElementById('report-content');
-    if (globalThis.marked?.parse) {
-      el.innerHTML = globalThis.marked.parse(__lastReportMd);
+    if (typeof globalThis.renderSafeMarkdown === 'function') {
+      el.innerHTML = globalThis.renderSafeMarkdown(__lastReportMd);
       __reportModalWrapH2Sections(el);
       __reportModalBuildNavIndex(el);
     } else {
