@@ -101,7 +101,7 @@ function readFallback(root, serviceLog) {
 
 function readBundledCurrentRelease(root, serviceLog) {
   var pkg = readJson(path.join(root, 'package.json'), serviceLog, 'package metadata');
-  var version = String(pkg && pkg.version || '').trim();
+  var version = String(pkg?.version || '').trim();
   if (!VERSION_RE.test(version)) return null;
 
   var changelogPath = path.join(root, 'CHANGELOG.md');
@@ -118,9 +118,12 @@ function readBundledCurrentRelease(root, serviceLog) {
     return null;
   }
 
-  var escapedVersion = version.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  var escapedVersion = version.replaceAll(
+    /[.*+?^${}()|[\]\\]/g,
+    String.raw`\$&`
+  );
   var headerPattern = new RegExp(
-    '^## \\[' + escapedVersion + '\\](?: - (\\d{4}-\\d{2}-\\d{2}))?\\s*$',
+    String.raw`^## \[${escapedVersion}\](?: - (\d{4}-\d{2}-\d{2}))?\s*$`,
     'm'
   );
   var header = headerPattern.exec(changelog);
