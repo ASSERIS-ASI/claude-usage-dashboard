@@ -391,6 +391,7 @@
           },
           {
             id: 'proxy-latency',
+            requires: ['latency'],
             titleKey: 'proxyLatencyChartTitle',
             type: 'line',
             engine: 'echarts',
@@ -419,6 +420,7 @@
           },
           {
             id: 'proxy-hourly-latency',
+            requires: ['latency'],
             titleKey: 'proxyHourlyLatencyTitle',
             type: 'bar',
             engine: 'echarts',
@@ -429,6 +431,7 @@
           },
           {
             id: 'proxy-error-trend',
+            requires: ['status'],
             titleKey: 'proxyErrorTrendTitle',
             type: 'line',
             engine: 'echarts',
@@ -457,6 +460,7 @@
           },
           {
             id: 'proxy-cache-fix-activity',
+            requires: ['fixes'],
             titleKey: 'proxyCacheFixActivityTitle',
             type: 'mixed',
             engine: 'echarts',
@@ -529,7 +533,8 @@
           { id: 'cf-counterfactual', titleKey: 'cfCounterTitle', type: 'html', engine: 'html', canvasId: 'cf-counterfactual', renderFn: 'renderCostIntelligence' },
           { id: 'cf-cost-fever', titleKey: 'cfCostFeverTitle', type: 'line', engine: 'echarts', canvasId: 'c-cf-cost-fever', size: { cols: 2, minHeight: 420 }, renderFn: 'renderCostIntelligence' },
           { id: 'cf-top5-sessions', titleKey: 'cfTop5Title', type: 'table', engine: 'html', canvasId: 'cf-top5-sessions', renderFn: 'renderCostIntelligence' },
-          { id: 'cf-token-decomposition', titleKey: 'cfDecompTitle', type: 'bar', engine: 'html', canvasId: 'cf-token-decomposition', renderFn: 'renderCostIntelligence' }
+          { id: 'cf-token-decomposition', titleKey: 'cfDecompTitle', type: 'bar', engine: 'html', canvasId: 'cf-token-decomposition', renderFn: 'renderCostIntelligence' },
+          { id: 'cf-rate-history', titleKey: 'cfRateHistoryTitle', type: 'line', engine: 'echarts', canvasId: 'c-cf-rate-history', size: { cols: 2, minHeight: 340 }, renderFn: 'renderCf_rateHistory' }
         ]
       },
 

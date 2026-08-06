@@ -36,7 +36,16 @@ function register(deps) {
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive'
       });
-      res.write('data: ' + JSON.stringify(getCachedData()) + '\n\n');
+      // The stream carries the same shape as /api/usage, capabilities included:
+      // a payload without them makes the chart classification flip off on every
+      // live update and back on at the next reload.
+      var streamSetup = require('../../app/product-setup').read();
+      res.write('data: ' + JSON.stringify({
+        ...getCachedData(),
+        capabilities: require('../../domain/addons/addon-adapter').capabilities(
+          streamSetup?.sources || {}, { setup: streamSetup }
+        )
+      }) + '\n\n');
       sseClients.push(res);
       req.on('close', function () {
         var idx = sseClients.indexOf(res);

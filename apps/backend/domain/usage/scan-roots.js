@@ -420,12 +420,46 @@ module.exports = {
 
 var PROXY_LOG_DIR_NAME = 'anthropic-proxy-logs';
 
+/**
+ * Compatible request NDJSON comes from a co-located proxy or gateway that
+ * writes this record shape — a source the standalone product neither ships
+ * nor produces, and distinct from the Cache Fix add-on. Before this switch the
+ * dashboard always resolved the default directory, always found nothing, and
+ * rendered the request-fed widgets as permanently empty boxes instead of
+ * reporting an unconfigured source. For the dashboard the source is therefore
+ * opt-in through setup; every other product keeps the previous
+ * environment-driven behaviour.
+ */
+function isDashboardProduct() {
+  return String(process.env.ASSERIS_PRODUCT || '').toLowerCase() === 'dashboard';
+}
+
+function requestNdjsonEnabled() {
+  if (!isDashboardProduct()) return true;
+  return require('../../app/product-setup').read()?.sources?.request_ndjson === true;
+}
+
+function setupRequestLogDir() {
+  var configured = require('../../app/product-setup').read()?.request_log_dir;
+  return configured ? path.resolve(String(configured)) : '';
+}
+
 function getProxyLogDir() {
+  if (isDashboardProduct()) {
+    if (!requestNdjsonEnabled()) return '';
+    return setupRequestLogDir() || path.join(HOME, '.claude', PROXY_LOG_DIR_NAME);
+  }
   return process.env.ANTHROPIC_PROXY_LOG_DIR ||
     path.join(HOME, '.claude', PROXY_LOG_DIR_NAME);
 }
 
 function configuredProxyLogDirs() {
+  if (!requestNdjsonEnabled()) return [];
+  // An explicitly configured directory is the whole answer. Adding the
+  // historical locations on top would silently mix in records the user did not
+  // select, which is how an unconfigured source used to look "half connected".
+  var configured = isDashboardProduct() ? setupRequestLogDir() : '';
+  if (configured) return [configured];
   var dirs = [getProxyLogDir()];
   var raw = String(process.env.CLAUDE_USAGE_PROXY_LOG_DIRS || '');
   var separator = process.platform === 'win32' ? /[;\r\n]+/ : /[:;\r\n]+/;

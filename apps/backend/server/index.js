@@ -18,6 +18,7 @@ var http = require('node:http');
 var securityHeaders = require('./security-headers');
 var productProfile = require('../product-profile');
 var productSetup = productProfile.dashboardOnly ? require('../app/product-setup') : null;
+var rateCards = require('../domain/usage/rate-cards');
 
 var layoutRoutes = require('./routes/layout-routes');
 var streamRoutes = require('./routes/stream-routes');
@@ -82,6 +83,17 @@ function createServer(ctx) {
         source_selection: setupStatus.sources,
         setup_configured: setupStatus.configured,
         evidence_sources: evidenceSources
+      }));
+      return;
+    }
+
+    // Published token rates as a dated history. Served rather than embedded so
+    // the cost charts read one authoritative copy instead of carrying their own.
+    if (pathname === '/api/rate-cards' && req.method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+      res.end(JSON.stringify({
+        history: rateCards.history(),
+        changes: rateCards.changePoints()
       }));
       return;
     }

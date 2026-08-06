@@ -118,6 +118,10 @@
         if (!p) return NodeFilter.FILTER_REJECT;
         if (p.classList?.contains("tt")) return NodeFilter.FILTER_REJECT;
         if (SKIP_TAGS[p.tagName]) return NodeFilter.FILTER_REJECT;
+        // The setup wizard is short, functional copy shown before the
+        // dashboard exists. Dotted glossary underlines mid-sentence make it
+        // read as broken rather than annotated.
+        if (p.closest?.("#product-setup-overlay")) return NodeFilter.FILTER_REJECT;
         return NodeFilter.FILTER_ACCEPT;
       }
     });

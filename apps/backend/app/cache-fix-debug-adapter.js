@@ -19,7 +19,11 @@ function selectedPath(env, home) {
     ? require('./product-setup').normalizeSources(setup)
     : require('./cache-fix-usage-adapter').enabledSources(null, env);
   if (!sources?.cache_fix) return null;
-  return setup?.cache_fix_debug ? path.resolve(setup.cache_fix_debug) : debugPath(env, home);
+  return require('../domain/addons/addon-adapter').find('cache_fix', 'debug', {
+    env: env || process.env,
+    home: home,
+    setup: setup
+  }) || (setup?.cache_fix_debug ? path.resolve(setup.cache_fix_debug) : debugPath(env, home));
 }
 
 function fixName(message) {

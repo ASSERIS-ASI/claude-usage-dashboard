@@ -1077,7 +1077,16 @@
       tbAugmentBuilderChildrenFromRegistry(result);
       return result;
     }
-    // Section-only: enrich with scaffold blocks in template order
+    // Section-only: enrich with scaffold blocks in template order, then fill
+    // the rest in from the registry.
+    //
+    // The scaffold alone is not enough. For a section the historic scaffold
+    // plan does not know, it falls back to the section's ECharts and drops
+    // every KPI and HTML widget — Cost Forensic came back as 2 of its 7
+    // widgets. The template path that carries layout blocks has always
+    // augmented from the registry; a section-only template deserves the same
+    // answer, otherwise which widgets you get depends on how the template
+    // happens to be written rather than on what the section contains.
     var scaffoldNested = tbNestedModelFromPageScaffold();
     var scaffoldById = {};
     for (var scSec of scaffoldNested) {
@@ -1093,6 +1102,7 @@
         out.push({ id: pw.id, span: pw.span || 12, children: [] });
       }
     }
+    tbAugmentBuilderChildrenFromRegistry(out);
     return out;
   }
 

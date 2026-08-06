@@ -14,5 +14,13 @@ The browser UI installs and serves these pinned dependencies locally:
 - DOMPurify 3.4.12 — Apache-2.0 or MPL-2.0
 - Cinzel via `@fontsource/cinzel` 5.3.0 — SIL Open Font License 1.1
 
+These font files are redistributed with the source tree in `public/fonts` and
+served from `/assets/fonts`. Each is licensed under the SIL Open Font License
+1.1, which permits redistribution as part of this project:
+
+- Gelasio — copyright Eben Sorkin (Sorkin Type); metric-compatible with Georgia
+- Carlito — copyright Łukasz Dziedzic (tyPoland); metric-compatible with Calibri
+- Cascadia Code — copyright Microsoft Corporation
+
 All names and trademarks belong to their respective owners. Compatibility does
 not imply endorsement.

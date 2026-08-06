@@ -848,6 +848,11 @@
   "cfReconL3Note": "L3 Vendor-API: not configured \u2014 Reconciliation unlocked once Anthropic Billing endpoint available.",
 
   "cfCounterTitle": "Counter-Factual \u2014 what if no overhead",
+  "cfRateHistoryTitle": "Rate history per model",
+  "cfRateHistorySubtitle": "Published token prices by effective date. Bands mark when a new rate card took effect.",
+  "cfRateHistoryEmpty": "No rate cards available.",
+  "cfRateHistoryInput": "Input",
+  "cfRateHistoryOutput": "Output",
   "cfCostFeverTitle": "Cost Fever \u2014 Session Concurrency & M(t)",
   "cfCounterHeadline": "This week you pay {amount} Overhead Tax.",
   "cfCounterNegligible": "Overhead negligible \u2014 your sessions are efficient.",

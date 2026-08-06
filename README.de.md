@@ -22,8 +22,14 @@ Anthropic-Abo, additive Datenquellen und Logverzeichnisse ab. Claude JSONL ist
 die Basis; Cache Fix und Code Meter lassen sich unabhängig oder gemeinsam als
 zusätzliche Dienste aktivieren.
 
-Voraussetzung ist Node.js 24 LTS. Alle Browser-Bibliotheken und
-Schriften werden lokal aus gepinnten Paketabhängigkeiten bereitgestellt.
+Voraussetzung ist Node.js 24 LTS. Alle Browser-Bibliotheken werden lokal aus
+gepinnten Paketabhängigkeiten bereitgestellt; die Schriften Gelasio, Carlito
+und Cascadia Code liegen unter der SIL Open Font License 1.1 im Quellbaum. Kein
+Asset wird von einem CDN geladen.
+
+Der Erststart legt zusätzlich das Layout an: Jede Rubrik startet mit ihrem
+eigenen Default-Template als bearbeitbare Kopie. Ein vorhandenes Layout wird
+nicht überschrieben.
 
 Unterstützt werden lokale Claude-JSONL-Dateien, kompatible Request-NDJSON sowie
 optionale Read-only-Adapter für
@@ -49,7 +55,28 @@ vor der Aggregation zusammengeführt und nicht doppelt gezählt.
 
 Die Integration liest die Quellen nur. Request-Dauer und HTTP-Fehler gehören
 nicht zu `usage.jsonl`; ohne eine separat unterstützte Quelle bleiben sie
-unverfügbar und werden nicht geschätzt.
+unverfügbar und werden nicht geschätzt. Im Proxy-Modus kann die
+request-log-Erweiterung ein Timing-Log schreiben; dessen Pfad wird über
+`CACHE_FIX_REQUEST_LOG` angegeben und liefert die Latenz-Charts.
+
+## Charts und Datenquellen
+
+Jede Datenquelle deklariert, was sie trägt, und jedes Chart, was es braucht.
+Charts, deren Voraussetzung keine aktivierte Quelle liefert, werden
+ausgeblendet statt leer gezeichnet — eine leere Achse liest sich als „nichts
+passiert“ und wäre damit eine andere und falsche Aussage. Das Ausblenden wird
+nicht automatisch rückgängig gemacht: Wird die Quelle später ergänzt, bleibt
+das Chart ausgeblendet, bis es im Layout-Builder wieder aktiviert wird.
+
+## Preishistorie
+
+Tokenpreise ändern sich zu angekündigten Terminen und werden deshalb als Liste
+datierter Karten geführt, nicht als eine aktuelle Tabelle. Ein Datensatz wird
+mit der Karte berechnet, die zu seinem eigenen Zeitpunkt galt — eine Juli-Zahl
+bleibt eine Juli-Zahl und wird nicht still zu heutigen Preisen neu gerechnet.
+Die mitgelieferten Karten werden beim Erststart nach `rate-cards.ndjson` ins
+Statusverzeichnis übernommen; die Datei wächst nur, Karten werden nie
+nachträglich geändert. **Cost Forensic** zeigt die Historie je Modell.
 
 Die vollständige Dokumentation mit Docker-Aufruf, Datenquellen,
 Umgebungsvariablen, Netzwerkzugriffen und Reset-Hinweisen steht in

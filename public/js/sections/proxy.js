@@ -98,16 +98,26 @@
   }
   window._computeProxyCtx = _computeProxyCtx;
 
+  /**
+   * Latency and status charts are hidden when the day has no connection view.
+   * That used to be decided by the source label alone: anything that was not
+   * labelled proxy counted as request-only, so a record carrying a measured
+   * duration was suppressed because of where it came from rather than what it
+   * held. The interceptor's own proxy mode can supply timing, so the data
+   * decides.
+   */
   function setProxySourceAvailability(proxyDays, hasInterceptor, hasProxy) {
-    var requestOnly = hasInterceptor && !hasProxy;
+    var hasTiming = (proxyDays || []).some(function (day) {
+      return Number(day?.avg_duration_ms) > 0;
+    });
+    var requestOnly = hasInterceptor && !hasProxy && !hasTiming;
     var sourceChanged = window.__proxyRequestOnly !== requestOnly;
     window.__proxyRequestOnly = requestOnly;
-    ['c-proxy-latency', 'c-proxy-hourly-latency'].forEach(function (id) {
-      var box = document.getElementById(id)?.closest('.chart-box');
-      if (box) box.style.display = requestOnly ? 'none' : '';
-    });
-    var errorBox = document.getElementById('c-proxy-error-trend')?.closest('.chart-box');
-    if (errorBox) errorBox.style.display = requestOnly || proxyDays.length < 2 ? 'none' : '';
+    // Visibility of these three is decided by the capability classification:
+    // the chart declares what it needs, the sources declare what they deliver.
+    // Setting display here as well meant two rules fought over the same box and
+    // the later render won, which is why a chart nobody could fill kept
+    // reappearing.
 
     var efficiencyBox = document.getElementById('c-proxy-efficiency-heatmap')?.closest('.chart-box');
     if (efficiencyBox) efficiencyBox.style.display = proxyDays.length < 2 ? 'none' : '';

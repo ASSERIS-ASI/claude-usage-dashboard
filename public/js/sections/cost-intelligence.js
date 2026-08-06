@@ -248,8 +248,22 @@
     };
   }
 
+  var __cfJsonlMtAttempts = {};
+  var CF_JSONL_MT_RETRIES = 3;
+
+  /**
+   * Session turns are cached server-side and built on first request, so the
+   * first call for a date can legitimately come back empty and be answered in
+   * full moments later. Recording that empty answer as final meant the lanes
+   * stayed blank for the rest of the page even though the data had arrived —
+   * an empty result is therefore retried a few times before it counts.
+   */
   function cfLoadJsonlMtSessions(date, data) {
-    if (!date || __cfJsonlMtPending[date] || Object.hasOwn(__cfJsonlMtByDate, date)) return;
+    if (!date || __cfJsonlMtPending[date]) return;
+    var settled = Object.hasOwn(__cfJsonlMtByDate, date);
+    var attempts = __cfJsonlMtAttempts[date] || 0;
+    if (settled && (__cfJsonlMtByDate[date].length || attempts >= CF_JSONL_MT_RETRIES)) return;
+    __cfJsonlMtAttempts[date] = attempts + 1;
     __cfJsonlMtPending[date] = true;
     fetch('/api/session-turns?date=' + encodeURIComponent(date))
       .then(function (response) { return response.ok ? response.json() : Promise.reject(new Error('session-turns ' + response.status)); })
@@ -265,6 +279,8 @@
       .finally(function () { delete __cfJsonlMtPending[date]; });
   }
 
+  var __cfHadProxyDay = false;
+
   // ── Main render ───────────────────────────────────────────────────────────
 
   function renderCostForensic(data) {
@@ -273,12 +289,19 @@
 
     var pd = getProxyDay(data);
     if (!pd) {
-      setText('cf-hero-spent-value', '\u2014');
-      setText('cf-hero-delta-value', '\u2014');
-      setText('cf-hero-forecast-value', '\u2014');
+      // A payload can arrive without proxy days while a parse is still running.
+      // Blanking figures that were correct a moment ago turns a transient into
+      // something that looks like lost data, so what was shown stays until
+      // there is something to replace it with.
+      if (!__cfHadProxyDay) {
+        setText('cf-hero-spent-value', '\u2014');
+        setText('cf-hero-delta-value', '\u2014');
+        setText('cf-hero-forecast-value', '\u2014');
+      }
       __lastCfFingerprint = '';
       return;
     }
+    __cfHadProxyDay = true;
 
     var fp = (data.proxy?.generated || '') + '|' + (pd.gateway_burn_rate?.current_q7 || 0) + '|' +
       (data.proxy?.proxy_days || []).map(function (d) { return d.date; }).join(',') + '|' +
@@ -719,7 +742,7 @@
         borderWidth: 1,
         padding: [8, 10],
         extraCssText: 'opacity:1;backdrop-filter:none;filter:none;box-shadow:none;border-radius:3px;line-height:1.45;',
-        textStyle: { color: '#F7F3EC', fontSize: 12, fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace' },
+        textStyle: { color: '#F7F3EC', fontSize: 12, fontFamily: '"Cascadia Code", Consolas, ui-monospace, monospace' },
         position: function (point) {
           return [Math.round(point[0] + 12), Math.round(point[1] + 12)];
         },
@@ -954,6 +977,114 @@
         escHtml(t('cfDecompRawRatio').replace('{pct}', outPct)) + ' \u00b7 ' + fmtTokens + ' Tokens' +
       '</div>';
   }
+
+  // ── Rate card history ─────────────────────────────────────────────────────
+
+  var __rateChart = null;
+  var __rateCards = null;
+
+  /**
+   * Published token prices over time, one step line per model, with a band at
+   * every date a new rate card took effect. Prices change on announced dates,
+   * so the interesting part is not the current number but when it moved and
+   * which card moved it.
+   */
+  function renderRateHistory(payload) {
+    var el = document.getElementById('c-cf-rate-history');
+    if (!el || typeof echarts === 'undefined') return;
+    setText('cf-rate-history-title', t('cfRateHistoryTitle'));
+    setText('cf-rate-history-subtitle', t('cfRateHistorySubtitle'));
+
+    var history = payload?.history || {};
+    var changes = payload?.changes || [];
+    var models = Object.keys(history).sort();
+    if (!models.length) {
+      el.innerHTML = '<div style="color:#8C6A3F;font-size:11px;padding:36px;text-align:center">' +
+        escHtml(t('cfRateHistoryEmpty')) + '</div>';
+      return;
+    }
+
+    var today = new Date().toISOString().slice(0, 10);
+    var current = ['claude-opus-5', 'claude-sonnet-5', 'claude-haiku-4-5', 'claude-fable-5'];
+    var selected = {};
+    for (var model of models) selected[model] = current.indexOf(model) !== -1;
+
+    var series = models.map(function (model, index) {
+      var points = history[model].map(function (point) {
+        return [point.valid_from, point.input];
+      });
+      var last = history[model].at(-1);
+      if (last && last.valid_from < today) points.push([today, last.input]);
+      return {
+        name: model,
+        type: 'line',
+        step: 'end',
+        symbol: 'circle',
+        symbolSize: 5,
+        // Model colours are configured in setup; a chart-local palette would
+        // show the same model in a different colour on every surface.
+        itemStyle: { color: modelFamilyColor(model) },
+        lineStyle: { width: 2, color: modelFamilyColor(model) },
+        data: points
+      };
+    });
+
+    // The bands mark the effective dates themselves, so a jump is read as an
+    // event rather than as a coincidence of the line.
+    series[0].markLine = {
+      silent: true,
+      symbol: 'none',
+      lineStyle: { color: 'rgba(212,175,127,.35)', type: 'dashed' },
+      label: {
+        color: '#A0875E', fontSize: 10, formatter: function (item) { return item.name; }
+      },
+      data: changes.map(function (change) {
+        return { xAxis: change.valid_from, name: change.valid_from };
+      })
+    };
+
+    if (!__rateChart) __rateChart = echarts.init(el, null, { renderer: 'canvas' });
+    __rateChart.setOption({
+      animation: false,
+      grid: { left: 56, right: 24, top: 40, bottom: 28 },
+      legend: {
+        type: 'scroll', top: 2, textStyle: { color: '#B9B0A1', fontSize: 10 }, selected: selected
+      },
+      tooltip: {
+        trigger: 'axis',
+        backgroundColor: 'rgba(14,17,22,.95)', borderColor: '#2A2D34',
+        textStyle: { color: '#F7F3EC', fontSize: 11 },
+        valueFormatter: function (value) { return '$' + value + ' / MTok'; }
+      },
+      xAxis: {
+        type: 'time',
+        axisLabel: { color: '#8C6A3F', fontSize: 10 },
+        axisLine: { lineStyle: { color: '#2A2D34' } }
+      },
+      yAxis: {
+        type: 'value',
+        name: t('cfRateHistoryInput') + ' $/MTok',
+        nameTextStyle: { color: '#8C6A3F', fontSize: 10 },
+        axisLabel: { color: '#8C6A3F', fontSize: 10, formatter: '${value}' },
+        splitLine: { lineStyle: { color: '#1A1D24' } }
+      },
+      series: series
+    }, true);
+  }
+
+  window.renderCf_rateHistory = function () {
+    if (__rateCards) { renderRateHistory(__rateCards); return; }
+    fetch('/api/rate-cards', { cache: 'no-store' })
+      .then(function (response) { return response.ok ? response.json() : null; })
+      .then(function (payload) {
+        if (!payload) return;
+        __rateCards = payload;
+        renderRateHistory(payload);
+      })
+      .catch(function (error) {
+        if (window.appLogger) window.appLogger.debugM('cost-intelligence', 'catch', 'rate_cards_failed', error?.message || error);
+      });
+  };
 
   // ── Exports ───────────────────────────────────────────────────────────────
 

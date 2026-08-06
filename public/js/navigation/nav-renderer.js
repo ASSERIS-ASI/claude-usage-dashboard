@@ -107,6 +107,14 @@
       }
     }
 
+    // Hoisted charts are placed for one surface only, so switching pages has
+    // to lay the grid out again rather than just toggling section visibility.
+    try {
+      window.__dispatcherLayout?.applyGridLayout?.();
+    } catch (error) {
+      if (window.appLogger) window.appLogger.debugM('nav-renderer', 'catch', 'relayout_failed', error?.message || error);
+    }
+
     // Sync nav button active state
     var btns = document.querySelectorAll('.surface-nav-btn');
     for (var j = 0; j < btns.length; j++) {

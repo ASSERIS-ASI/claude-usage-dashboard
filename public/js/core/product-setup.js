@@ -9,6 +9,7 @@
       localDescription: 'Sessions, Modelle, Tokens, Subagents und geschätzte Kosten.',
       cacheFixDescription: 'Zusätzlich Request-Cache, TTL, Quota und beobachtete Fix-Aktivität.',
       meterDescription: 'Validierte MeterRow-v1-Daten mit Request- und Agent-Zuordnung.',
+      requestNdjsonDescription: 'Kompatible Request-NDJSON aus einem Proxy oder Gateway, das dieses Format schreibt — Latenz, Fehlerraten, Traffic-Quellen.',
       baseSource: 'Basisquelle',
       additionalService: 'Zusätzlicher Dienst',
       detected: 'erkannt',
@@ -26,7 +27,11 @@
       subagents: 'Subagents',
       noDefault: 'Keine Standard-Logquelle gefunden.',
       missingSelection: 'Bitte Sprache und Abo auswählen.',
-      setupFailed: 'Setup fehlgeschlagen'
+      missingLanguage: 'Bitte eine Sprache auswählen.',
+      missingPlan: 'Bitte ein Abo auswählen.',
+      setupFailed: 'Setup fehlgeschlagen',
+      footerLicense: 'Apache-Lizenz 2.0 · quelloffen',
+      footerTrademark: 'ASSERIS, das ASSERIS-Wortzeichen und das Drei-Knoten-Logo sind eingetragene Marken der ASSERIS AISBL.'
     },
     en: {
       configuration: 'Basic configuration',
@@ -36,6 +41,7 @@
       localDescription: 'Sessions, models, tokens, subagents and estimated cost.',
       cacheFixDescription: 'Adds request cache, TTL, quota and observed fix activity.',
       meterDescription: 'Validated MeterRow v1 data with request and agent attribution.',
+      requestNdjsonDescription: 'Compatible request NDJSON from a proxy or gateway writing this format — latency, error rates, traffic sources.',
       baseSource: 'Base source',
       additionalService: 'Additional service',
       detected: 'detected',
@@ -53,7 +59,11 @@
       subagents: 'subagents',
       noDefault: 'No default log source found.',
       missingSelection: 'Select a language and plan.',
-      setupFailed: 'Setup failed'
+      missingLanguage: 'Select a language.',
+      missingPlan: 'Select a plan.',
+      setupFailed: 'Setup failed',
+      footerLicense: 'Apache License 2.0 · open source',
+      footerTrademark: 'ASSERIS, the ASSERIS wordmark and the three-node logo are registered trademarks of ASSERIS AISBL.'
     },
     ko: {
       configuration: '기본 구성',
@@ -63,6 +73,7 @@
       localDescription: '세션, 모델, 토큰, 하위 에이전트 및 예상 비용.',
       cacheFixDescription: '요청 캐시, TTL, 할당량 및 관찰된 수정 활동을 추가합니다.',
       meterDescription: '요청 및 에이전트 귀속이 포함된 검증된 MeterRow v1 데이터.',
+      requestNdjsonDescription: '이 형식을 기록하는 프록시 또는 게이트웨이의 호환 요청 NDJSON — 지연 시간, 오류율, 트래픽 소스.',
       baseSource: '기본 소스',
       additionalService: '추가 서비스',
       detected: '감지됨',
@@ -80,7 +91,11 @@
       subagents: '하위 에이전트',
       noDefault: '기본 로그 소스를 찾을 수 없습니다.',
       missingSelection: '언어와 요금제를 선택하십시오.',
-      setupFailed: '설정 실패'
+      missingLanguage: '언어를 선택하십시오.',
+      missingPlan: '요금제를 선택하십시오.',
+      setupFailed: '설정 실패',
+      footerLicense: 'Apache License 2.0 · 오픈 소스',
+      footerTrademark: 'ASSERIS, ASSERIS 워드마크 및 3노드 로고는 ASSERIS AISBL의 등록 상표입니다.'
     }
   };
 
@@ -100,7 +115,8 @@
     var selectedSources = {
       claude_jsonl: true,
       cache_fix: configuredSources.cache_fix === true,
-      meter: configuredSources.meter === true
+      meter: configuredSources.meter === true,
+      request_ndjson: configuredSources.request_ndjson === true
     };
     var warmup = document.getElementById('warmup-overlay');
     if (warmup) warmup.style.display = 'none';
@@ -108,7 +124,10 @@
     overlay.id = 'product-setup-overlay';
     overlay.innerHTML =
       '<div class="product-setup-card">' +
-        '<div class="product-setup-kicker">CLAUDE USAGE DASHBOARD</div>' +
+        '<div class="product-setup-brand">' +
+          '<img class="product-setup-logo" src="/assets/img/asseris_logo_horizontal_TM.svg" alt="ASSERIS">' +
+          '<span class="product-setup-kicker">CLAUDE USAGE DASHBOARD</span>' +
+        '</div>' +
         '<div class="product-setup-step" id="product-setup-step-1">' +
           '<h1>' + c.configuration + '</h1>' +
           '<p class="product-setup-lead">' + c.noScanYet + '</p>' +
@@ -143,6 +162,13 @@
               '<span>' + c.meterDescription + '</span>' +
               '<em>claude-meter.jsonl ' + (status.meter_detected ? c.detected : c.notFound) + '</em>' +
             '</label>' +
+            '<label class="product-setup-option" data-source-card="request_ndjson">' +
+              '<span class="product-setup-option-head"><input type="checkbox" class="product-setup-source-toggle" data-source="request_ndjson"' +
+                (selectedSources.request_ndjson ? ' checked' : '') + '>' +
+                '<strong>Request NDJSON</strong><small>' + c.additionalService + '</small></span>' +
+              '<span>' + c.requestNdjsonDescription + '</span>' +
+              '<em>NDJSON ' + (status.request_ndjson_detected ? c.detected : c.notFound) + '</em>' +
+            '</label>' +
           '</div>' +
           '<div class="product-setup-source-paths" data-source-paths="cache_fix"' + (selectedSources.cache_fix ? '' : ' hidden') + '>' +
             '<label class="product-setup-path">Cache-Fix usage.jsonl' +
@@ -157,6 +183,11 @@
               '<input id="product-setup-meter-path" value="' + esc(preserved.meterUsage || status.meter_usage) + '">' +
             '</label>' +
           '</div>' +
+          '<div class="product-setup-source-paths" data-source-paths="request_ndjson"' + (selectedSources.request_ndjson ? '' : ' hidden') + '>' +
+            '<label class="product-setup-path">Request NDJSON directory' +
+              '<input id="product-setup-request-path" value="' + esc(preserved.requestLogDir || status.request_log_dir) + '">' +
+            '</label>' +
+          '</div>' +
           '<div class="product-setup-actions"><span></span><button type="button" id="product-setup-next">' + c.next + '</button></div>' +
         '</div>' +
         '<div class="product-setup-step" id="product-setup-step-2" hidden>' +
@@ -169,6 +200,11 @@
           '<div class="product-setup-actions"><button type="button" id="product-setup-back">' + c.back + '</button><button type="button" id="product-setup-finish">' + c.finish + '</button></div>' +
         '</div>' +
         '<p class="product-setup-error" id="product-setup-error"></p>' +
+        '<footer class="product-setup-legal">' +
+          '<span>Claude Usage Dashboard · ' + c.footerLicense + '</span>' +
+          '<span>\u00A9 2026 ASSERIS AISBL and contributors</span>' +
+          '<span>' + c.footerTrademark + '</span>' +
+        '</footer>' +
       '</div>';
     document.body.appendChild(overlay);
 
@@ -185,7 +221,8 @@
           sources: selectedSources,
           cacheFixUsage: document.getElementById('product-setup-cache-path').value,
           cacheFixDebug: document.getElementById('product-setup-cache-debug-path').value,
-          meterUsage: document.getElementById('product-setup-meter-path').value
+          meterUsage: document.getElementById('product-setup-meter-path').value,
+          requestLogDir: document.getElementById('product-setup-request-path').value
         };
         localStorage.setItem('usageDashboardLang', radio.value);
         overlay.remove();
@@ -236,7 +273,10 @@
       var language = overlay.querySelector('input[name="product-language"]:checked');
       var plan = overlay.querySelector('input[name="product-plan"]:checked');
       if (!language || !plan) {
-        errorEl.textContent = c.missingSelection;
+        // Name what is actually missing — reporting both when only one is
+        // unset sends people looking at a field they already filled in.
+        if (!language && !plan) errorEl.textContent = c.missingSelection;
+        else errorEl.textContent = language ? c.missingPlan : c.missingLanguage;
         return;
       }
       errorEl.textContent = '';
@@ -280,6 +320,7 @@
           cache_fix_usage: document.getElementById('product-setup-cache-path').value.trim(),
           cache_fix_debug: document.getElementById('product-setup-cache-debug-path').value.trim(),
           meter_usage: document.getElementById('product-setup-meter-path').value.trim(),
+          request_log_dir: document.getElementById('product-setup-request-path').value.trim(),
           log_roots: roots,
           include_subagents: document.getElementById('product-setup-subagents').checked
         })

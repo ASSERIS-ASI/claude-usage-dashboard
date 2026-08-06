@@ -33,10 +33,10 @@
   --asseris-dark-border-l:#3D3830;  /* Light borders */
 
   /* ---- Typography ---- */
-  --asseris-font-display: "Cinzel", "Trajan Pro", Optima, Georgia, serif;
-  --asseris-font-serif:   Optima, Georgia, serif;
-  --asseris-font-body:    Inter, system-ui, -apple-system, sans-serif;
-  --asseris-font-mono:    "SFMono-Regular", Consolas, monospace;
+  --asseris-font-display: "Cinzel", "Trajan Pro", "Gelasio", Georgia, serif;
+  --asseris-font-serif:   "Gelasio", Georgia, serif;
+  --asseris-font-body:    "Carlito", Calibri, system-ui, -apple-system, sans-serif;
+  --asseris-font-mono:    "Cascadia Code", Consolas, ui-monospace, monospace;
 
   /* Wordmark settings */
   --asseris-wordmark-tracking: 0.42em;   /* letter-spacing for ASSERIS */

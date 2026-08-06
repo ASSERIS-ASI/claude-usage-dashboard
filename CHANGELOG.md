@@ -5,6 +5,45 @@ documented here.
 
 ## Unreleased
 
+## [1.11.0] - 2026-08-06
+
+### Added
+
+- Added an add-on adapter that declares each optional source once, with the
+  artifacts it writes and what each of them carries, and finds those artifacts
+  by searching rather than by probing fixed paths.
+- Added capability-based chart availability: a chart that no enabled source can
+  supply is hidden instead of drawn empty, and dropped from the stored layout.
+- Added a dated rate-card history, so a record is costed with the rates that
+  were published at its own timestamp. The committed cards are seeded into
+  `rate-cards.ndjson` during setup and only ever appended to.
+- Added a per-model rate-history chart to Cost Forensic, marking the day each
+  card took effect.
+- Added compatible request NDJSON as a selectable add-on rather than an
+  always-on source.
+- Added a per-page default template, preloaded at first setup as an editable
+  copy so every page starts laid out and stays rearrangeable.
+- Added `CACHE_FIX_REQUEST_LOG` for the request-timing log written by the
+  proxy-mode request-log extension, which supplies the latency views.
+- Added the self-hosted Gelasio, Carlito and Cascadia Code text faces, replacing
+  the previously assumed system fonts.
+- Added a widget-registry coverage check to the test suite.
+
+### Fixed
+
+- Fixed section charts that the layout never extracted and that therefore never
+  rendered.
+- Fixed hoisted charts appearing on pages they do not belong to.
+- Fixed the setup wizard reporting the field that is actually missing, and
+  reporting what the add-on adapter found rather than a fixed expectation.
+- Fixed the wizard's spacing, header line and legend collision, and gave it the
+  horizontal ASSERIS logo with the Apache-2.0 and trademark footer.
+
+### Changed
+
+- Charts now draw each model in the colour chosen for it during setup, so one
+  model keeps one colour across every view.
+
 ## [1.10.0] - 2026-07-30
 
 ### Added
@@ -106,5 +145,6 @@ Those historical tags remain attached to the
 They are deliberately not retargeted to the continuation repository. The
 predecessor `v1.8.4` entry was a draft rather than a published release.
 
+[1.11.0]: https://github.com/ASSERIS-ASI/claude-usage-dashboard/releases/tag/v1.11.0
 [1.10.0]: https://github.com/ASSERIS-ASI/claude-usage-dashboard/releases/tag/v1.10.0
 [1.9.0]: https://github.com/ASSERIS-ASI/claude-usage-dashboard/releases/tag/v1.9.0

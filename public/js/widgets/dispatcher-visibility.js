@@ -157,6 +157,62 @@
     return false;
   }
 
+  /**
+   * Take charts the selected sources cannot fill out of the stored layout.
+   *
+   * Filtering at render time is not enough: a saved config that lists such a
+   * chart puts it back on the surface on every load, and it stays offered in
+   * the sidebar and the builder. The classification therefore has to reach the
+   * config itself — the entry is dropped from the layout and recorded as
+   * hidden, so the chart neither renders nor is offered until its source is
+   * present.
+   */
+  function reconcileUnavailableCharts(capabilities) {
+    if (!Array.isArray(capabilities)) return false;
+    var reg = getRegistry();
+    var prefs = global.__prefsStore.prefs;
+    if (!reg || !prefs) return false;
+
+    var unavailable = {};
+    for (var section of reg.sections) {
+      for (var chart of section.charts || []) {
+        if (!Array.isArray(chart.requires) || !chart.requires.length) continue;
+        var missing = chart.requires.filter(function (need) {
+          return !capabilities.includes(need);
+        });
+        if (missing.length) unavailable[chart.id] = true;
+      }
+    }
+    if (!Object.keys(unavailable).length) return false;
+
+    var changed = false;
+    if (Array.isArray(prefs.widgets)) {
+      var kept = [];
+      for (var widget of prefs.widgets) {
+        if (unavailable[widget.id]) { changed = true; continue; }
+        if (Array.isArray(widget.nested)) {
+          var nested = widget.nested.filter(function (child) { return !unavailable[child.id]; });
+          if (nested.length !== widget.nested.length) {
+            changed = true;
+            widget = { ...widget, nested: nested };
+          }
+        }
+        kept.push(widget);
+      }
+      if (changed) prefs.widgets = kept;
+    }
+
+    var hidden = Array.isArray(prefs.hiddenCharts) ? prefs.hiddenCharts.slice() : [];
+    for (var chartId of Object.keys(unavailable)) {
+      if (!hidden.includes(chartId)) { hidden.push(chartId); changed = true; }
+    }
+    if (changed) {
+      prefs.hiddenCharts = hidden.sort(compareIds);
+      global.__prefsStore.savePrefs();
+    }
+    return changed;
+  }
+
   // ── Visibility setters (public API) ────────────────────────────
 
   function setVisibility(id, visible) {
@@ -335,6 +391,7 @@
     getWidgetSpan: getWidgetSpan,
     applyVisibility: applyVisibility,
     reconcileHiddenSectionsWithWidgets: reconcileHiddenSectionsWithWidgets,
+    reconcileUnavailableCharts: reconcileUnavailableCharts,
     setVisibility: setVisibility,
     setGroupChartsVisibility: setGroupChartsVisibility,
     setChartVisibility: setChartVisibility,

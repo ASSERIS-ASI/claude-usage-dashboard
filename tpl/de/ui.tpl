@@ -848,6 +848,11 @@
   "cfReconL3Note": "L3 Vendor-API: nicht konfiguriert \u2014 Reconciliation wird freigeschaltet sobald Anthropic Billing-Endpunkt verf\u00fcgbar.",
 
   "cfCounterTitle": "Counter-Factual \u2014 was w\u00e4re ohne Overhead",
+  "cfRateHistoryTitle": "Preis-Historie je Modell",
+  "cfRateHistorySubtitle": "Ver\u00f6ffentlichte Token-Preise nach G\u00fcltigkeitsdatum. Banden markieren, wann eine neue Preiskarte in Kraft trat.",
+  "cfRateHistoryEmpty": "Keine Preiskarten verf\u00fcgbar.",
+  "cfRateHistoryInput": "Input",
+  "cfRateHistoryOutput": "Output",
   "cfCostFeverTitle": "Cost Fever \u2014 Session-Konkurrenz & M(t)",
   "cfCounterHeadline": "Diese Woche zahlst du {amount} Overhead Tax.",
   "cfCounterNegligible": "Overhead vernachl\u00e4ssigbar \u2014 deine Sessions sind effizient.",

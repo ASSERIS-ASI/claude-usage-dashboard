@@ -13,7 +13,9 @@ logs unchanged and keeps its derived state local.
 - Claude Code session JSONL discovery and incremental scanning
 - daily usage, model, cache, agent and session analysis
 - cost-forensic and counterfactual reports
-- configurable dashboard pages and reusable layout templates
+- configurable dashboard pages, each starting from an editable default template
+- dated rate cards, so a past cost is priced with the rates that were published
+  when it was incurred
 - German, English and Korean UI
 - optional read-only adapters for:
   - [`cnighswonger/claude-code-cache-fix`](https://github.com/cnighswonger/claude-code-cache-fix) `usage.jsonl` and debug log
@@ -27,7 +29,10 @@ logs unchanged and keeps its derived state local.
 - local Claude Code logs for usage views
 
 The browser UI is self-contained: ECharts, DataTables, Marked, DOMPurify and
-Cinzel are installed as pinned package dependencies and served locally.
+Cinzel are installed as pinned package dependencies and served locally. The
+Gelasio, Carlito and Cascadia Code text faces ship with the source tree under
+the SIL Open Font License 1.1. No web font, script or stylesheet is fetched
+from a CDN.
 
 ## Start
 
@@ -152,7 +157,37 @@ Default optional-source locations:
 | compatible request telemetry | `~/.claude/anthropic-proxy-logs/**/*.ndjson` | `ANTHROPIC_PROXY_LOG_DIR`, `CLAUDE_USAGE_PROXY_LOG_DIRS` |
 | Cache Fix usage | `~/.claude/usage.jsonl` | `CACHE_FIX_USAGE_LOG` |
 | Cache Fix activity | `~/.claude/cache-fix-debug.log` | `CACHE_FIX_DEBUG_LOG` |
+| Cache Fix request timing | none; proxy mode with the request-log extension only | `CACHE_FIX_REQUEST_LOG` |
 | Meter rows | `~/.claude/claude-meter.jsonl` | `CLAUDE_METER_LOG` |
+
+A configured path always wins, an environment override comes next. Failing
+both, the dashboard searches the Claude configuration directory and its own
+state directory for the artifact by name, so a file dropped one folder over is
+still found. The newest match wins. Nothing is invented: an artifact that is
+not there is reported as absent rather than assumed at its default path.
+
+### What each source makes available
+
+An additive source is not a switch for more numbers, it decides which analyses
+can exist at all. Each artifact declares what it carries, and a chart declares
+what it needs:
+
+| Capability | Carried by | Charts that need it |
+| --- | --- | --- |
+| tokens, session | base source | usage, model and session analysis |
+| cache, ttl | Cache Fix usage, Meter rows, request NDJSON | cache-read ratio, TTL tiers |
+| quota | Cache Fix usage, Meter rows, request NDJSON | 5-hour and 7-day quota views |
+| fixes | Cache Fix activity log | applied and skipped fix activity |
+| latency | request NDJSON, Cache Fix request timing | API latency per day and per hour |
+| status | request NDJSON | error and 429 rate trends |
+| clients | request NDJSON | client comparison and traffic sources |
+
+Charts whose capability no enabled source delivers are hidden rather than
+drawn empty, and are dropped from the stored layout — an empty axis reads as
+"nothing happened", which is a different and wrong statement. Removal is not
+automatically undone: adding the missing source later leaves the chart hidden
+until it is switched back on in the layout builder, so a deliberate layout is
+never rearranged behind the user's back.
 
 ## Configuration
 
@@ -166,6 +201,7 @@ Default optional-source locations:
 | `CLAUDE_USAGE_PROXY_LOG_DIRS` | additional request-NDJSON directories |
 | `CACHE_FIX_USAGE_LOG` | Cache Fix `usage.jsonl` path |
 | `CACHE_FIX_DEBUG_LOG` | Cache Fix activity-log path |
+| `CACHE_FIX_REQUEST_LOG` | Cache Fix request-timing log written by the proxy-mode request-log extension |
 | `CLAUDE_METER_LOG` | claude-code-meter row path |
 | `CLAUDE_USAGE_SCAN_INTERVAL_SEC` | background scan interval |
 | `CLAUDE_USAGE_LOG_LEVEL` | server log level |
@@ -175,6 +211,14 @@ The setup screen persists the selected language, plan, additive sources, model
 colours and log roots inside `CLAUDE_USAGE_STATE_DIR`. Existing configurations
 that used the former `local`, `cache-fix` or `meter` mode are migrated when
 read.
+
+A first run also lays out the dashboard: every page starts from its own default
+template, stored as an editable copy so it can be rearranged immediately, with
+the shipped originals kept as read-only fallbacks. An existing layout is never
+overwritten.
+
+The model colours chosen during setup are the colours the charts draw with, so
+one model keeps one colour across every view.
 
 ## Network and estimates
 
@@ -186,6 +230,21 @@ not require a CDN.
 Displayed list-price cost and quota projections are estimates derived from
 logged token classes and selected plan assumptions; they are not Anthropic
 billing records.
+
+### Rate cards
+
+Published token prices change on announced dates, so they are kept as a list of
+dated cards instead of one current table. A record is costed with the card that
+was valid at its own timestamp — a July figure stays a July figure and is not
+silently recomputed at today's rates. Each card names its source and how firm
+that source is, so a computed cost remains attributable.
+
+The committed cards are the baseline and are copied into
+`rate-cards.ndjson` in the state directory on first setup, so a fresh install
+can still price the past. That file is append-only: a new price adds a card,
+it never edits an existing one, which is what keeps an earlier computation
+reproducible. **Cost Forensic** charts the history per model and marks the day
+each card took effect.
 
 ## Reset and troubleshooting
 

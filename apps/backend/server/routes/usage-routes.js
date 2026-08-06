@@ -3,6 +3,8 @@
 var path = require('path');
 var URL = typeof globalThis.URL === 'function' ? globalThis.URL : require('url').URL;
 var quotaDivisor = require('../../domain/usage/quota-divisor');
+var addonAdapter = require('../../domain/addons/addon-adapter');
+var productSetupModel = require('../../app/product-setup');
 
 /**
  * @asseris-module       Usage Routes
@@ -94,7 +96,16 @@ function register(deps) {
         'Cache-Control': 'no-store, no-cache, must-revalidate',
         Pragma: 'no-cache'
       });
-      res.end(JSON.stringify(getCachedData()));
+      // What the selected add-ons can deliver, alongside the data itself, so a
+      // chart can classify itself instead of being special-cased by source.
+      var setupForCapabilities = productSetupModel.read();
+      res.end(JSON.stringify({
+        ...getCachedData(),
+        capabilities: addonAdapter.capabilities(
+          setupForCapabilities?.sources || {},
+          { setup: setupForCapabilities }
+        )
+      }));
       return true;
     }
 

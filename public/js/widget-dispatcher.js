@@ -247,32 +247,109 @@
       ? global.__dashboardState.getFilteredData(data)
       : data;
     var sections = getSortedSections();
+    renderSections(sections, renderData, days);
+
+    var reg = getRegistry();
+    if (!reg) return;
+    // A chart states what it needs; the selected add-ons state what they
+    // deliver. Anything that cannot be filled is taken off the surface rather
+    // than shown as an empty frame that looks like a defect.
+    var available = Array.isArray(renderData?.capabilities) ? renderData.capabilities : null;
+    reconcileStoredLayout(available);
+    renderPendingCharts(reg, collectPendingCharts(sections, available));
+  }
+
+  function renderSections(sections, renderData, days) {
     for (var sec of sections) {
       if (!isSectionVisible(sec.id)) continue;
       if (!sec.sectionRenderFn) continue;
       var fn = global[sec.sectionRenderFn];
-      if (typeof fn !== 'function') continue;
-
-      fn(renderData, days);
+      if (typeof fn === 'function') fn(renderData, days);
     }
+  }
 
-    // Render extracted charts individually (Phase 5: chart-level widgets)
-    var extracted = global.__extractedChartIds;
-    if (extracted && Object.keys(extracted).length) {
-      var reg = getRegistry();
-      if (reg) {
-        for (var ek in extracted) {
-          if (!Object.hasOwn(extracted, ek)) continue;
-          var chartDef = reg.findChart(ek);
-          if (!chartDef?.renderFn) continue;
-          var rf = global[chartDef.renderFn];
-          if (typeof rf !== 'function') continue;
-          try {
-            invokeChartRenderFn(chartDef.renderFn, rf);
-          } catch (error) { logWdOptionalErr(error); }
+  /**
+   * Correct the stored layout too. Hiding the element alone is not enough:
+   * the layout puts the chart back on every load and keeps offering it in the
+   * sidebar.
+   */
+  function reconcileStoredLayout(available) {
+    if (!available || !global.__dispatcherVisibility?.reconcileUnavailableCharts) return;
+    try {
+      global.__dispatcherVisibility.reconcileUnavailableCharts(available);
+    } catch (error) { logWdOptionalErr(error); }
+  }
+
+  function isUnfillable(chart, available) {
+    if (!available || !Array.isArray(chart.requires) || !chart.requires.length) return false;
+    return chart.requires.some(function (need) { return !available.includes(need); });
+  }
+
+  /**
+   * Charts whose drawing lives in their own render function, rather than inside
+   * the section renderer. This used to cover extracted charts only — charts the
+   * layout had lifted into standalone wrappers — so a chart that simply sat in
+   * its section template never had its renderer called at all. It showed its
+   * frame and title from the template and stayed blank, which looked like
+   * missing data and was missing wiring.
+   */
+  function collectPendingCharts(sections, available) {
+    var pending = {};
+    var extracted = global.__extractedChartIds || {};
+    for (var ek in extracted) {
+      if (Object.hasOwn(extracted, ek)) pending[ek] = true;
+    }
+    for (var secDef of sections) {
+      if (!isSectionVisible(secDef.id)) continue;
+      for (var chart of secDef.charts || []) {
+        if (isUnfillable(chart, available)) {
+          hideUnavailableChart(chart);
+          continue;
         }
+        // The section renderer already drew these; calling it again per chart
+        // would repeat the same work for every chart it owns.
+        if (!chart.renderFn || chart.renderFn === secDef.sectionRenderFn) continue;
+        if (!chart.canvasId || !document.getElementById(chart.canvasId)) continue;
+        if (!isChartVisible(chart.id)) continue;
+        pending[chart.id] = true;
       }
     }
+    return pending;
+  }
+
+  function renderPendingCharts(reg, pending) {
+    for (var chartId in pending) {
+      if (!Object.hasOwn(pending, chartId)) continue;
+      var chartDef = reg.findChart(chartId);
+      if (!chartDef?.renderFn) continue;
+      var rf = global[chartDef.renderFn];
+      if (typeof rf !== 'function') continue;
+      try {
+        invokeChartRenderFn(chartDef.renderFn, rf);
+      } catch (error) { logWdOptionalErr(error); }
+    }
+  }
+
+  /**
+   * Take a chart off the surface when its sources cannot fill it.
+   *
+   * A chart can be on screen twice over: as the box in its section template,
+   * and as the standalone wrapper the layout lifts into the grid. The wrapper
+   * carries its own element id and its own canvas, so hiding by the template's
+   * canvas id alone left the visible copy untouched.
+   */
+  function hideUnavailableChart(chart) {
+    if (!chart?.id) return;
+    var targets = [];
+    if (chart.canvasId) {
+      var templateCanvas = document.getElementById(chart.canvasId);
+      if (templateCanvas) targets.push(templateCanvas.closest?.('.chart-box, .cf-section, .cf-hero') || templateCanvas);
+    }
+    var wrapper = document.getElementById('widget-' + chart.id);
+    if (wrapper) targets.push(wrapper);
+    var hoisted = document.querySelector('[data-hoisted-chart="' + chart.id + '"]');
+    if (hoisted) targets.push(hoisted);
+    for (var target of targets) target.style.display = 'none';
   }
 
   /** ECharts that need filtered days, _econData, or session picker (cognitive split from invokeChartRenderFn). */

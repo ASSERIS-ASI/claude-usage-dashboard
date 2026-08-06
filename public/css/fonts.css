@@ -1,0 +1,96 @@
+/*
+ * Self-hosted metric replacements. The dashboard must render identically
+ * offline and on machines without the proprietary originals:
+ *   Georgia  -> Gelasio       (metrically compatible)
+ *   Calibri  -> Carlito       (metrically compatible)
+ *   Consolas -> Cascadia Code (Microsoft's own free successor)
+ * The originals stay in the stacks as fallbacks for machines that have them.
+ */
+@font-face {
+  font-family: "Gelasio";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/assets/fonts/Gelasio-Regular.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Gelasio";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/assets/fonts/Gelasio-Italic.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Gelasio";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/assets/fonts/Gelasio-SemiBold.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Gelasio";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/assets/fonts/Gelasio-Bold.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Gelasio";
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/assets/fonts/Gelasio-BoldItalic.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Carlito";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/assets/fonts/Carlito-Regular.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Carlito";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/assets/fonts/Carlito-Italic.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Carlito";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/assets/fonts/Carlito-Bold.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Carlito";
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/assets/fonts/Carlito-BoldItalic.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Cascadia Code";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/assets/fonts/CascadiaCode-Regular.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Cascadia Code";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/assets/fonts/CascadiaCode-Bold.woff2") format("woff2");
+}
+

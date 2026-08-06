@@ -4,6 +4,19 @@ var fs = require('node:fs');
 var os = require('node:os');
 var path = require('node:path');
 
+/**
+ * The first candidate that is a real number. Producers name the same
+ * measurement differently — duration_ms here, latencyMs there — and a value
+ * that is absent must not become a zero, so the fallback is explicit.
+ */
+function firstNumber(candidates, fallback) {
+  for (var candidate of candidates) {
+    var value = Number(candidate);
+    if (Number.isFinite(value)) return value;
+  }
+  return fallback;
+}
+
 function usagePath(env, home) {
   env = env || process.env;
   home = home || os.homedir();
@@ -45,28 +58,17 @@ function existingFile(file) {
   }
 }
 
+// Which add-ons are on is this module's business; where their files sit is the
+// add-on adapter's. Resolving paths here meant a file dropped one directory
+// over went unnoticed, and every new location had to be taught separately.
 function collectSources(env, home) {
   var setup = null;
   try { setup = require('./product-setup').read(); } catch (error) { setup = null; }
   var sources = enabledSources(setup, env);
-  var selected = [];
-  if (sources.cache_fix) {
-    var cacheFixFile = setup?.cache_fix_usage
-      ? path.resolve(setup.cache_fix_usage)
-      : usagePath(env, home);
-    if (existingFile(cacheFixFile)) {
-      selected.push({ file: cacheFixFile, source: 'claude-code-cache-fix' });
-    }
-  }
-  if (sources.meter) {
-    var meterFile = setup?.meter_usage
-      ? path.resolve(setup.meter_usage)
-      : meterPath(env, home);
-    if (existingFile(meterFile)) {
-      selected.push({ file: meterFile, source: 'claude-code-meter' });
-    }
-  }
-  return selected;
+  return require('../domain/addons/addon-adapter').evidenceSources(
+    { cache_fix: sources.cache_fix === true, meter: sources.meter === true },
+    { env: env || process.env, home: home || os.homedir(), setup: setup }
+  );
 }
 
 function collect(env, home) {
@@ -148,10 +150,14 @@ function translate(entry, source) {
   return {
     ts_start: ts,
     ts_end: ts,
-    duration_ms: null,
+    // The stock usage-log record has no timing or status: its proxy sees both
+    // but does not persist them. When a producer does supply them, they are
+    // real measurements and must not be thrown away for the sake of matching
+    // the leanest variant of the format.
+    duration_ms: firstNumber([entry.duration_ms, entry.latencyMs], null),
     method: 'POST',
     path: '/v1/messages',
-    upstream_status: 200,
+    upstream_status: firstNumber([entry.upstream_status, entry.status], 200),
     usage: {
       input_tokens: Number(entry.input_tokens) || 0,
       output_tokens: Number(entry.output_tokens) || 0,

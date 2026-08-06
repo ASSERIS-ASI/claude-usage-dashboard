@@ -25,7 +25,8 @@ test('persists a validated local setup with configured model colors', function (
     assert.deepEqual(status.sources, {
       claude_jsonl: true,
       cache_fix: false,
-      meter: false
+      meter: false,
+      request_ndjson: false
     });
     assert.equal(status.subscription, 'pro');
     assert.equal(status.include_subagents, true);
@@ -77,7 +78,8 @@ test('maps legacy source modes to additive selections', function () {
     assert.deepEqual(value.sources, {
       claude_jsonl: true,
       cache_fix: false,
-      meter: true
+      meter: true,
+      request_ndjson: false
     });
   } finally {
     if (previous == null) delete process.env.CLAUDE_USAGE_STATE_DIR;
@@ -90,4 +92,63 @@ test('rejects a setup without a source selection', function () {
   assert.throws(function () {
     setup.write({ subscription: 'pro', language: 'en' });
   }, /sources must select Claude JSONL/);
+});
+
+test('keeps request NDJSON opt-in and remembers its directory', function () {
+  var temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'cud-setup-request-ndjson-test-'));
+  var previous = process.env.CLAUDE_USAGE_STATE_DIR;
+  process.env.CLAUDE_USAGE_STATE_DIR = path.join(temporary, 'state');
+  var logs = path.join(temporary, 'request-logs');
+  fs.mkdirSync(logs);
+  // Detection means "there is something to read", not "the directory exists".
+  fs.writeFileSync(path.join(logs, 'proxy-2026-08-06.ndjson'), '{"ts_start":"2026-08-06T00:00:00Z"}\n', 'utf8');
+  try {
+    var off = setup.write({
+      sources: { claude_jsonl: true },
+      subscription: 'pro',
+      language: 'en',
+      log_roots: [temporary]
+    });
+    assert.equal(off.sources.request_ndjson, false);
+    assert.ok(off.supported_sources.includes('request_ndjson'));
+
+    var on = setup.write({
+      sources: { claude_jsonl: true, request_ndjson: true },
+      subscription: 'pro',
+      language: 'en',
+      log_roots: [temporary],
+      request_log_dir: logs
+    });
+    assert.equal(on.sources.request_ndjson, true);
+    assert.equal(on.request_log_dir, logs);
+    assert.equal(on.request_ndjson_detected, true);
+    assert.equal(setup.read().request_log_dir, logs);
+  } finally {
+    if (previous == null) delete process.env.CLAUDE_USAGE_STATE_DIR;
+    else process.env.CLAUDE_USAGE_STATE_DIR = previous;
+    fs.rmSync(temporary, { recursive: true, force: true });
+  }
+});
+
+test('migrates a legacy setup with the request NDJSON source switched off', function () {
+  var temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'cud-setup-legacy-test-'));
+  var previous = process.env.CLAUDE_USAGE_STATE_DIR;
+  var stateDir = path.join(temporary, 'state');
+  process.env.CLAUDE_USAGE_STATE_DIR = stateDir;
+  fs.mkdirSync(stateDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(stateDir, 'setup.json'),
+    JSON.stringify({ version: 2, mode: 'combined', subscription: 'pro', language: 'en' }),
+    'utf8'
+  );
+  try {
+    var value = setup.read();
+    assert.equal(value.sources.cache_fix, true);
+    assert.equal(value.sources.meter, true);
+    assert.equal(value.sources.request_ndjson, false);
+  } finally {
+    if (previous == null) delete process.env.CLAUDE_USAGE_STATE_DIR;
+    else process.env.CLAUDE_USAGE_STATE_DIR = previous;
+    fs.rmSync(temporary, { recursive: true, force: true });
+  }
 });

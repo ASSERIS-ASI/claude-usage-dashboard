@@ -44,6 +44,12 @@
       : true;
   }
 
+  function isChartVisible(chartId) {
+    return global.__dispatcherVisibility
+      ? global.__dispatcherVisibility.isChartVisible(chartId)
+      : true;
+  }
+
   function applyVisibility() {
     if (global.__dispatcherVisibility) global.__dispatcherVisibility.applyVisibility();
   }
@@ -267,6 +273,11 @@
           if (sectionModel.id === 'proxy' && global.__proxyRequestOnly && widgetDef?.fullProxyOnly) {
             continue;
           }
+          // The scaffold places whatever the builder template lists and used to
+          // force each entry visible, so a chart removed by the capability
+          // classification was put straight back on screen. Hidden means hidden
+          // here too, whoever hid it.
+          if (!isChartVisible(widget.id)) continue;
           var el = elementByWidget[widget.id];
           if (!el || selectedElements.indexOf(el) !== -1) continue;
           var sourceShell = directChildUnder(el, contentRoot);
@@ -358,6 +369,24 @@
     title.textContent = typeof t === 'function' ? t(chartDef.titleKey || chartDef.id) : chartDef.id;
     wrapper.appendChild(title);
 
+    // A chart is not a bare canvas: its box carries the heading, the blurb and
+    // the shell that holds the loading state and the placeholder. Building a
+    // second box with a second canvas left the visible one blank forever,
+    // because the renderer kept painting into the original. The original box
+    // is moved instead, whole, and is marked so later passes can hide it again.
+    var templateElement = chartDef.canvasId ? document.getElementById(chartDef.canvasId) : null;
+    // Boxes carry different class names per surface: chart-box in the analytics
+    // sections, cf-section in cost forensic. Matching only the first left those
+    // charts building a replacement box again, empty, while the renderer kept
+    // painting into the original.
+    var templateBox = templateElement?.closest
+      ? templateElement.closest('.chart-box, .cf-section, .cf-hero')
+      : null;
+    if (templateBox) {
+      templateBox.dataset.hoistedChart = chartDef.id;
+      return templateBox;
+    }
+
     if (chartDef.engine === 'echarts') {
       var canvas = document.createElement('div');
       canvas.id = wrapperId + '-canvas';
@@ -389,7 +418,7 @@
     if (!gridEl) return;
 
     // Hide all existing standalone chart wrappers (will re-show only those in current template)
-    var existingWrappers = gridEl.querySelectorAll('[id^="widget-"]');
+    var existingWrappers = gridEl.querySelectorAll('[id^="widget-"], [data-hoisted-chart]');
     for (var ew of existingWrappers) {
       ew.style.display = 'none';
     }
@@ -409,16 +438,22 @@
     var placed = {};
     var extractedCharts = {};
     var managedSurfaces = {};
+    var activeSurface = global.__navState?.getActive?.() || '';
     var activeTemplates = global.__prefsStore.prefs?.activeTemplates || {};
     var savedTemplates = global.__prefsStore.prefs?.templates || [];
-    for (var activeSurface in activeTemplates) {
+    // Named apart from activeSurface on purpose: this walks every surface that
+    // has a template, while activeSurface is the one page on screen. Sharing
+    // the name let the loop overwrite it with whichever surface came last, so
+    // the ownership check below compared against an arbitrary page — harmless
+    // only as long as no templates were stored at all.
+    for (var templateSurface in activeTemplates) {
       for (var sti = 0; sti < savedTemplates.length; sti++) {
         if (
-          savedTemplates[sti].surfaceId === activeSurface &&
-          savedTemplates[sti].name === activeTemplates[activeSurface] &&
+          savedTemplates[sti].surfaceId === templateSurface &&
+          savedTemplates[sti].name === activeTemplates[templateSurface] &&
           Array.isArray(savedTemplates[sti].builderSections)
         ) {
-          managedSurfaces[activeSurface] = true;
+          managedSurfaces[templateSurface] = true;
           break;
         }
       }
@@ -442,11 +477,16 @@
       }
 
       if (wType === 'chart') {
-        // Chart-level widget: create standalone wrapper
+        // A chart belongs to a section, and that section belongs to a surface.
+        // Hoisting lifts the chart out of its section, so nothing downstream
+        // can still tell that a proxy chart has no business on the cost page —
+        // it has to be decided here, before the wrapper exists.
+        if (ownerSurface && activeSurface && ownerSurface !== activeSurface) continue;
         var chartDef = reg.findChart(w.id);
         if (!chartDef) continue;
         var wrapper = getOrCreateChartWrapper(chartDef);
-        wrapper.setAttribute('data-span', String(w.span || 6));
+        wrapper.dataset.span = String(w.span || 6);
+        if (ownerSurface) wrapper.dataset.surface = ownerSurface;
         wrapper.style.display = '';
         gridEl.appendChild(wrapper);
         extractedCharts[w.id] = true;

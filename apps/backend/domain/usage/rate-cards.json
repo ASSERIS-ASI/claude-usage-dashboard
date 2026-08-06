@@ -1,0 +1,382 @@
+{
+  "schema": 1,
+  "note": "Append-only history of published token rates in USD per million tokens. A card is never edited once published: a price change appends a new card with its own valid_from. Cost figures must be computed with the card that was valid at the record's timestamp, not with the newest one, otherwise a July figure is recomputed at September prices. Each card names where its numbers came from so a computed cost stays attributable.",
+  "cards": [
+    {
+      "id": "2026-04-04-meter-initial",
+      "valid_from": "2026-04-04",
+      "source": "claude-code-meter src/constants.mjs @ a095032",
+      "source_url": "https://gitea.example.com/GRO/claude-code-meter",
+      "recorded_at": "2026-08-06",
+      "confidence": "commit",
+      "note": "First rate table in the add-on, dated by its commit. It knew one cache write rate rather than the 5m/1h split, so cache_write_1h is absent rather than guessed, and it recorded a fast tier of 30/150 for Opus — the published page later shows fast mode at 10/50 and only for Opus 5 and 4.8.",
+      "models": {
+        "claude-opus-4-6": {
+          "standard": {
+            "input": 5,
+            "output": 25,
+            "cache_write_5m": 6.25,
+            "cache_read": 0.5
+          },
+          "fast": {
+            "input": 30,
+            "output": 150,
+            "cache_write_5m": 37.5,
+            "cache_read": 3
+          }
+        },
+        "claude-sonnet-4-6": {
+          "standard": {
+            "input": 3,
+            "output": 15,
+            "cache_write_5m": 3.75,
+            "cache_read": 0.3
+          }
+        },
+        "claude-haiku-4-5": {
+          "standard": {
+            "input": 1,
+            "output": 5,
+            "cache_write_5m": 1.25,
+            "cache_read": 0.1
+          }
+        }
+      }
+    },
+    {
+      "id": "2026-04-30-meter",
+      "valid_from": "2026-04-30",
+      "source": "claude-code-meter src/constants.mjs @ f7fe028",
+      "source_url": "https://gitea.example.com/GRO/claude-code-meter",
+      "recorded_at": "2026-08-06",
+      "confidence": "commit",
+      "note": "Adds Opus 4.7 and the earlier 4.5 models and splits the cache write rate into the 5m and 1h tiers. The fast tier is recorded as the add-on had it.",
+      "models": {
+        "claude-opus-4-7": {
+          "standard": {
+            "input": 5,
+            "output": 25,
+            "cache_write_5m": 6.25,
+            "cache_write_1h": 10,
+            "cache_read": 0.5
+          },
+          "fast": {
+            "input": 30,
+            "output": 150,
+            "cache_write_5m": 37.5,
+            "cache_write_1h": 60,
+            "cache_read": 3
+          }
+        },
+        "claude-opus-4-6": {
+          "standard": {
+            "input": 5,
+            "output": 25,
+            "cache_write_5m": 6.25,
+            "cache_write_1h": 10,
+            "cache_read": 0.5
+          },
+          "fast": {
+            "input": 30,
+            "output": 150,
+            "cache_write_5m": 37.5,
+            "cache_write_1h": 60,
+            "cache_read": 3
+          }
+        },
+        "claude-opus-4-5": {
+          "standard": {
+            "input": 5,
+            "output": 25,
+            "cache_write_5m": 6.25,
+            "cache_write_1h": 10,
+            "cache_read": 0.5
+          }
+        },
+        "claude-sonnet-4-6": {
+          "standard": {
+            "input": 3,
+            "output": 15,
+            "cache_write_5m": 3.75,
+            "cache_write_1h": 6,
+            "cache_read": 0.3
+          }
+        },
+        "claude-sonnet-4-5": {
+          "standard": {
+            "input": 3,
+            "output": 15,
+            "cache_write_5m": 3.75,
+            "cache_write_1h": 6,
+            "cache_read": 0.3
+          }
+        },
+        "claude-haiku-4-5": {
+          "standard": {
+            "input": 1,
+            "output": 5,
+            "cache_write_5m": 1.25,
+            "cache_write_1h": 2,
+            "cache_read": 0.1
+          }
+        }
+      }
+    },
+    {
+      "id": "2026-06-01-dashboard-table",
+      "valid_from": "2026-06-01",
+      "source": "dashboard MODEL_PRICING (quota-divisor.js, \"pricing as of 2026-06\")",
+      "source_url": "https://platform.claude.com/docs/en/docs/about-claude/pricing",
+      "recorded_at": "2026-08-06",
+      "confidence": "secondary",
+      "note": "Carried over from the table the dashboard costed with before this history existed, so figures computed back then stay reproducible. Its comment dates it to 2026-06 and resolves per family rather than per model id, hence one entry per family.",
+      "models": {
+        "claude-opus-4-7": {
+          "standard": {
+            "input": 5,
+            "output": 25,
+            "cache_write_5m": 6.25,
+            "cache_write_1h": 10,
+            "cache_read": 0.5
+          }
+        },
+        "claude-opus-4-6": {
+          "standard": {
+            "input": 5,
+            "output": 25,
+            "cache_write_5m": 6.25,
+            "cache_write_1h": 10,
+            "cache_read": 0.5
+          }
+        },
+        "claude-sonnet-4-6": {
+          "standard": {
+            "input": 3,
+            "output": 15,
+            "cache_write_5m": 3.75,
+            "cache_write_1h": 6,
+            "cache_read": 0.3
+          }
+        },
+        "claude-haiku-4-5": {
+          "standard": {
+            "input": 1,
+            "output": 5,
+            "cache_write_5m": 1.25,
+            "cache_write_1h": 2,
+            "cache_read": 0.1
+          }
+        },
+        "claude-fable-5": {
+          "standard": {
+            "input": 10,
+            "output": 50,
+            "cache_write_5m": 12.5,
+            "cache_write_1h": 20,
+            "cache_read": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "2026-08-06-published",
+      "valid_from": "2026-08-06",
+      "source": "Anthropic published pricing page",
+      "source_url": "https://platform.claude.com/docs/en/docs/about-claude/pricing",
+      "recorded_at": "2026-08-06",
+      "confidence": "published",
+      "note": "Full model set including retired models and the fast tier. Fast mode exists only for Opus 5 and Opus 4.8; Opus 4.7 rejects speed=fast and Opus 4.6 silently bills at standard rates, so neither carries a fast entry. Batch is a flat 50% discount on input and output and is therefore expressed as a multiplier rather than duplicated per model.",
+      "multipliers": {
+        "batch": 0.5,
+        "inference_geo_us": 1.1
+      },
+      "models": {
+        "claude-fable-5": {
+          "standard": {
+            "input": 10,
+            "output": 50,
+            "cache_write_5m": 12.5,
+            "cache_write_1h": 20,
+            "cache_read": 1
+          }
+        },
+        "claude-mythos-5": {
+          "standard": {
+            "input": 10,
+            "output": 50,
+            "cache_write_5m": 12.5,
+            "cache_write_1h": 20,
+            "cache_read": 1
+          }
+        },
+        "claude-opus-5": {
+          "standard": {
+            "input": 5,
+            "output": 25,
+            "cache_write_5m": 6.25,
+            "cache_write_1h": 10,
+            "cache_read": 0.5
+          },
+          "fast": {
+            "input": 10,
+            "output": 50
+          }
+        },
+        "claude-opus-4-8": {
+          "standard": {
+            "input": 5,
+            "output": 25,
+            "cache_write_5m": 6.25,
+            "cache_write_1h": 10,
+            "cache_read": 0.5
+          },
+          "fast": {
+            "input": 10,
+            "output": 50
+          }
+        },
+        "claude-opus-4-7": {
+          "standard": {
+            "input": 5,
+            "output": 25,
+            "cache_write_5m": 6.25,
+            "cache_write_1h": 10,
+            "cache_read": 0.5
+          }
+        },
+        "claude-opus-4-6": {
+          "standard": {
+            "input": 5,
+            "output": 25,
+            "cache_write_5m": 6.25,
+            "cache_write_1h": 10,
+            "cache_read": 0.5
+          }
+        },
+        "claude-opus-4-5": {
+          "standard": {
+            "input": 5,
+            "output": 25,
+            "cache_write_5m": 6.25,
+            "cache_write_1h": 10,
+            "cache_read": 0.5
+          }
+        },
+        "claude-opus-4-1": {
+          "standard": {
+            "input": 15,
+            "output": 75,
+            "cache_write_5m": 18.75,
+            "cache_write_1h": 30,
+            "cache_read": 1.5
+          }
+        },
+        "claude-opus-4": {
+          "standard": {
+            "input": 15,
+            "output": 75,
+            "cache_write_5m": 18.75,
+            "cache_write_1h": 30,
+            "cache_read": 1.5
+          }
+        },
+        "claude-sonnet-5": {
+          "standard": {
+            "input": 2,
+            "output": 10,
+            "cache_write_5m": 2.5,
+            "cache_write_1h": 4,
+            "cache_read": 0.2
+          }
+        },
+        "claude-sonnet-4-6": {
+          "standard": {
+            "input": 3,
+            "output": 15,
+            "cache_write_5m": 3.75,
+            "cache_write_1h": 6,
+            "cache_read": 0.3
+          }
+        },
+        "claude-sonnet-4-5": {
+          "standard": {
+            "input": 3,
+            "output": 15,
+            "cache_write_5m": 3.75,
+            "cache_write_1h": 6,
+            "cache_read": 0.3
+          }
+        },
+        "claude-sonnet-4": {
+          "standard": {
+            "input": 3,
+            "output": 15,
+            "cache_write_5m": 3.75,
+            "cache_write_1h": 6,
+            "cache_read": 0.3
+          }
+        },
+        "claude-haiku-4-5": {
+          "standard": {
+            "input": 1,
+            "output": 5,
+            "cache_write_5m": 1.25,
+            "cache_write_1h": 2,
+            "cache_read": 0.1
+          }
+        },
+        "claude-haiku-3-5": {
+          "standard": {
+            "input": 0.8,
+            "output": 4,
+            "cache_write_5m": 1,
+            "cache_write_1h": 1.6,
+            "cache_read": 0.08
+          }
+        }
+      }
+    },
+    {
+      "id": "2026-09-01-sonnet-5-standard",
+      "valid_from": "2026-09-01",
+      "source": "Anthropic published pricing page",
+      "source_url": "https://platform.claude.com/docs/en/docs/about-claude/pricing",
+      "recorded_at": "2026-08-06",
+      "confidence": "published",
+      "note": "Announced in advance: the Sonnet 5 introductory price of 2/10 runs through 2026-08-31, after which standard pricing applies. Recorded ahead of time so a September record is not costed at the introductory rate. Only the changed model is listed; every other rate is inherited from the preceding card.",
+      "inherits": "2026-08-06-published",
+      "models": {
+        "claude-sonnet-5": {
+          "standard": {
+            "input": 3,
+            "output": 15,
+            "cache_write_5m": 3.75,
+            "cache_write_1h": 6,
+            "cache_read": 0.3
+          }
+        }
+      }
+    }
+  ],
+  "plans": {
+    "note": "Subscription list prices in USD per day, derived from the monthly rate. Recorded with the date the add-on last verified them; an API plan has no flat rate, so it carries none.",
+    "source": "claude-code-meter PLAN_LIST_PRICE_PER_DAY",
+    "source_url": "https://claude.com/pricing",
+    "verified": "2026-05-01",
+    "usd_per_day": {
+      "pro": 0.667,
+      "max-5x": 3.333,
+      "max-20x": 6.667,
+      "max": 3.333,
+      "api": null,
+      "unknown": null
+    }
+  },
+  "coarse_estimates": {
+    "note": "Not a rate card. claude-code-cache-fix costs with a single blended constant instead of per-model rates and requires consumers to label the result as coarse. Recorded so a figure that came from it is never presented as a per-model computation.",
+    "source": "claude-code-cache-fix proxy/rates.mjs @ d499900",
+    "source_url": "https://gitea.example.com/GRO/claude-code-cache-fix",
+    "recorded_at": "2026-08-06",
+    "weighted_token_cost_usd": 5e-06
+  }
+}

@@ -848,6 +848,11 @@
   "cfReconL3Note": "L3 벤더 API: 미구성 \u2014 Anthropic 빌링 엔드포인트 연결 시 조정 활성화.",
 
   "cfCounterTitle": "반사실 분석 \u2014 오버헤드 없는 경우",
+  "cfRateHistoryTitle": "\ubaa8\ub378\ubcc4 \uc694\uae08 \uc774\ub825",
+  "cfRateHistorySubtitle": "\uc801\uc6a9\uc77c \uae30\uc900 \uacf5\uc2dd \ud1a0\ud070 \uac00\uaca9. \ub744\ub294 \uc0c8 \uc694\uae08\ud45c\uac00 \uc801\uc6a9\ub41c \uc2dc\uc810\uc744 \ud45c\uc2dc\ud569\ub2c8\ub2e4.",
+  "cfRateHistoryEmpty": "\uc694\uae08\ud45c\uac00 \uc5c6\uc2b5\ub2c8\ub2e4.",
+  "cfRateHistoryInput": "\uc785\ub825",
+  "cfRateHistoryOutput": "\ucd9c\ub825",
   "cfCostFeverTitle": "Cost Fever \u2014 세션 동시성 & M(t)",
   "cfCounterHeadline": "이번 주 {amount} 오버헤드 세금을 지불합니다.",
   "cfCounterNegligible": "오버헤드 무시 가능 \u2014 세션이 효율적입니다.",
