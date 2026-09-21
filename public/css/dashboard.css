@@ -721,6 +721,8 @@ tr:hover td{background:#2A2D34}
 .day-picker-hint{font-size:.75rem;color:#8C6A3F;max-width:36rem;line-height:1.4}
 .forensic-charts-stack{margin-top:8px}
 .forensic-charts-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+/* Side-by-side charts share one baseline: the chart area sits at the bottom of its box, however long the text above it wraps. */
+.forensic-charts-pair>.chart-box{display:flex;flex-direction:column}.forensic-charts-pair>.chart-box>:last-child{margin-top:auto}
 @media(max-width:720px){.forensic-charts-pair{grid-template-columns:1fr}}
 .forensic-host-filter-wrap{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0 6px}
 .forensic-host-filter-label{font-size:.72rem;color:#A0875E;flex-shrink:0}

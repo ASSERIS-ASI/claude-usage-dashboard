@@ -641,7 +641,7 @@
     },
     {
       id: 'proxy',
-      blocks: [12, 4, 4, 4, 6, 6, 6, 6, 12, 12],
+      blocks: [12, 4, 4, 4, 6, 6, 6, 6, 12, 12, 12],
       slotChartIds: [
         [
           'proxy-kpi-requests',
@@ -663,7 +663,8 @@
         ['proxy-error-trend'],
         ['proxy-cache-trend'],
         ['proxy-ttl-history'],
-        ['proxy-cache-fix-activity']
+        ['proxy-cache-fix-activity'],
+        ['proxy-quota-attribution']
       ]
     }
     // anthropic-status excluded: domId=null, lives in top-bar, not in #layout-grid

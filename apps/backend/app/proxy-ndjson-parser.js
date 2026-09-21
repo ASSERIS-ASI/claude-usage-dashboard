@@ -33,13 +33,13 @@
 let usageScanRoots = require('../domain/usage/scan-roots');
 let forEachJsonlLineSync = usageScanRoots.forEachJsonlLineSync;
 const quotaDivisor = require('../domain/usage/quota-divisor');
-const priceForModel = quotaDivisor.priceForModel;
-const FALLBACK_ANTHROPIC_PRICE = quotaDivisor.MODEL_PRICING.opus;
 let collectProxyNdjsonFiles = usageScanRoots.collectProxyNdjsonFiles;
 let getProxyLogDir = usageScanRoots.getProxyLogDir;
 let serviceLog = require('../infra/service-logger');
 let adapter = require('../domain/usage/evidence-record-adapter');
 let cacheFixUsage = require('./cache-fix-usage-adapter');
+let quotaAttribution = require('./quota-attribution');
+let pricing = require('../domain/usage/pricing');
 
 function _osFromIp(ip) {
   if (!ip) return null;
@@ -322,20 +322,22 @@ function _roundUsd(value) {
   return Math.round((value || 0) * 1000000) / 1000000;
 }
 
-function _usageCostUsd(usage, model) {
-  let breakdown = _usageCostBreakdown(usage, model);
+/** The day a record belongs to, from its own timestamp. Empty when it carries none. */
+function _recDay(rec) {
+  return String(rec?.ts_end || rec?.ts_start || '').slice(0, 10);
+}
+
+function _usageCostUsd(usage, model, rec) {
+  let breakdown = _usageCostBreakdown(usage, model, rec);
   return breakdown.input + breakdown.output + breakdown.cache_read + breakdown.cache_creation;
 }
 
-function _usageCostBreakdown(usage, model) {
+// Priced with the rate card in force on the record's own day, and the cache
+// write at its own TTL tier (domain/usage/pricing.js). The undated family table
+// is only the fallback, and every fallback is counted.
+function _usageCostBreakdown(usage, model, rec) {
   if (!usage) return { input: 0, output: 0, cache_read: 0, cache_creation: 0 };
-  let price = priceForModel(model) || FALLBACK_ANTHROPIC_PRICE;
-  return {
-    input: (usage.input_tokens || 0) * price.input / 1e6,
-    output: (usage.output_tokens || 0) * price.output / 1e6,
-    cache_read: (usage.cache_read_input_tokens || 0) * price.cache_read / 1e6,
-    cache_creation: (usage.cache_creation_input_tokens || 0) * price.cache_creation / 1e6
-  };
+  return pricing.costFor(usage, model, _recDay(rec), rec);
 }
 
 /**
@@ -785,7 +787,7 @@ function proxyNdjsonAccumulateUsageCacheLatency(dd, rec, tsEnd, dur, status, u) 
   _accPerHourLatency(dd, tsEnd, dur, status);
 }
 
-function _accModelStats(dd, model, dur, u) {
+function _accModelStats(dd, model, dur, u, rec) {
   if (!dd.models[model]) {
     dd.models[model] = {
       requests: 0,
@@ -795,7 +797,10 @@ function _accModelStats(dd, model, dur, u) {
       output_tokens: 0,
       cache_read_tokens: 0,
       cache_creation_tokens: 0,
-      estimated_cost_usd: 0
+      estimated_cost_usd: 0,
+      // Kept per class so the day total is SUMMED from the models instead of
+      // being recomputed from the same tokens a second time.
+      cost_parts: { input: 0, output: 0, cache_read: 0, cache_creation: 0 }
     };
   }
   dd.models[model].requests++;
@@ -805,7 +810,13 @@ function _accModelStats(dd, model, dur, u) {
     dd.models[model].output_tokens += (u.output_tokens || 0);
     dd.models[model].cache_read_tokens += (u.cache_read_input_tokens || 0);
     dd.models[model].cache_creation_tokens += (u.cache_creation_input_tokens || 0);
-    dd.models[model].estimated_cost_usd += _usageCostUsd(u, model);
+    let parts = _usageCostBreakdown(u, model, rec);
+    let cp = dd.models[model].cost_parts;
+    cp.input += parts.input;
+    cp.output += parts.output;
+    cp.cache_read += parts.cache_read;
+    cp.cache_creation += parts.cache_creation;
+    dd.models[model].estimated_cost_usd += parts.input + parts.output + parts.cache_read + parts.cache_creation;
   }
 }
 
@@ -825,7 +836,7 @@ function _pushQ5Sample(dd, rec, tsEnd, u, snap) {
   let ovStr = snap['anthropic-ratelimit-unified-overage-utilization'];
   if (Number.isNaN(q5Num) || q5Num < 0) return;
   let sampleModel = rec.response_model || rec.response_hints?.response_model || rec.request_hints?.model || 'unknown';
-  let sampleCost = _usageCostBreakdown(u || {}, sampleModel);
+  let sampleCost = _usageCostBreakdown(u || {}, sampleModel, rec);
   dd.q5_samples.push({
     ts: tsEnd,
     q5: q5Num,
@@ -921,7 +932,7 @@ function _accRateLimit(dd, rec, tsEnd, u) {
     // The bearer-derived account_key can rotate with credentials. Anthropic's
     // response organization id is the stable billing/account scope.
     let accountKey = snap._organization_id || rec.account_key || 'unknown';
-    let cost = _usageCostUsd(u, model);
+    let cost = _usageCostUsd(u, model, rec);
     if (!dd.overage_usage.accounts[accountKey]) {
       dd.overage_usage.accounts[accountKey] = {
         requests: 0,
@@ -1271,7 +1282,7 @@ function _accSessionGrowth(dd, rec, tsEnd, dur, clientType, provider, usage) {
   _accSessionTransport(sess, rec);
   sess.client_type = clientType;
   if (rec.connection_type) sess.connection_type = rec.connection_type;
-  let requestCostBreakdown = _usageCostBreakdown(usage, reqModel);
+  let requestCostBreakdown = _usageCostBreakdown(usage, reqModel, rec);
   let requestCost = requestCostBreakdown.input + requestCostBreakdown.output +
     requestCostBreakdown.cache_read + requestCostBreakdown.cache_creation;
   sess.model_costs[reqModel] = (sess.model_costs[reqModel] || 0) + requestCost;
@@ -1301,7 +1312,7 @@ function _accSessionGrowth(dd, rec, tsEnd, dur, clientType, provider, usage) {
 /** Models, stop reasons, rate-limit snapshot + q5 samples, cache-fix interop fields. */
 function proxyNdjsonAccumulateModelsRateInterop(dd, rec, tsEnd, u, dur, sourceFile) {
   let model = rec.response_model || rec.response_hints?.response_model || rec.request_hints?.model || 'unknown';
-  _accModelStats(dd, model, dur, u);
+  _accModelStats(dd, model, dur, u, rec);
   _accStopReasons(dd, rec.response_hints || {});
   _accRateLimit(dd, rec, tsEnd, u);
   _accInteropCounters(dd, rec, tsEnd);
@@ -1469,6 +1480,8 @@ function parseProxyNdjsonFiles(opts) {
     require('./cache-fix-debug-adapter').collect(process.env, usageScanRoots.HOME);
   let daily = {};
   let seenIds = new Set();
+  quotaDivisor.resetCacheSplitAnomalies();
+  pricing.resetMisses();
 
   for (let file of files) {
     try {
@@ -1510,12 +1523,29 @@ function parseProxyNdjsonFiles(opts) {
       serviceLog.warn('evidence-parse', 'cache-fix usage read failed ' + file + ': ' + (e.message || e));
     }
   }
+  let attribution = quotaAttribution.createAccumulator();
   for (let candidates of evidenceRecords.values()) {
     for (let evidence of candidates) {
+      // Every cache-fix observation counts for attribution, including requests
+      // the bundled proxy log already covers: the meter reading is the same.
+      _foldAttribution(attribution, evidence.record);
       if (_recordWasSeen(evidence.record, seenIds)) continue;
       _rememberRecord(evidence.record, seenIds);
       _processNdjsonLine(JSON.stringify(evidence.record), daily, evidence.file);
     }
+  }
+
+  // Named once per run, so a missing card is closed by appending one rather
+  // than found months later in a cost review.
+  let priceMisses = pricing.missTotals();
+  if (priceMisses.records > 0) {
+    serviceLog.warn('proxy-parse', 'no rate card for ' + priceMisses.records +
+      ' record(s); priced from the family table: ' + Object.keys(priceMisses.models).join(', '));
+  }
+  let anomalies = quotaDivisor.getCacheSplitAnomalies();
+  if (anomalies.split > 0) {
+    serviceLog.warn('proxy-parse', 'cache tier split did not reconcile on ' + anomalies.split +
+      ' record(s); priced from the ttl_tier marker instead');
   }
 
   // Build result array
@@ -1536,11 +1566,36 @@ function parseProxyNdjsonFiles(opts) {
     proxy_files: files.length,
     cache_fix_usage_files: cacheFixSources.length,
     cache_fix_debug_file: cacheFixDebug.file,
+    quota_attribution: cacheFixSources.length ? _buildAttribution(attribution) : null,
     evidence_files: files.length + cacheFixSources.length,
     host_labels: {},
     account_labels: {},
     generated: new Date().toISOString()
   };
+}
+
+// The attribution panel is an add-on view. Whatever goes wrong inside it must
+// cost the panel, never the proxy parse every other view depends on: a failure
+// is logged and the panel is left without data, which hides it.
+function _foldAttribution(attribution, record) {
+  if (!attribution.failed) {
+    try {
+      attribution.add(record);
+    } catch (e) {
+      attribution.failed = true;
+      serviceLog.warn('quota-attribution', 'fold failed: ' + (e.message || e));
+    }
+  }
+}
+
+function _buildAttribution(attribution) {
+  if (attribution.failed) return null;
+  try {
+    return attribution.build();
+  } catch (e) {
+    serviceLog.warn('quota-attribution', 'build failed: ' + (e.message || e));
+    return null;
+  }
 }
 
 function _modelAverages(models) {
@@ -1555,11 +1610,18 @@ function _estimatedCostBreakdown(models) {
   let out = { input: 0, output: 0, cache_read: 0, cache_creation: 0, total: 0 };
   for (let model of Object.keys(models || {})) {
     let m = models[model] || {};
-    let price = priceForModel(model) || FALLBACK_ANTHROPIC_PRICE;
-    out.input += (m.input_tokens || 0) * price.input / 1e6;
-    out.output += (m.output_tokens || 0) * price.output / 1e6;
-    out.cache_read += (m.cache_read_tokens || 0) * price.cache_read / 1e6;
-    out.cache_creation += (m.cache_creation_tokens || 0) * price.cache_creation / 1e6;
+    // Summed from what each record cost on its own day. A bucket without parts
+    // (built by an external caller) is priced from its aggregate, undated.
+    let parts = m.cost_parts || _usageCostBreakdown({
+      input_tokens: m.input_tokens,
+      output_tokens: m.output_tokens,
+      cache_read_input_tokens: m.cache_read_tokens,
+      cache_creation_input_tokens: m.cache_creation_tokens
+    }, model, null);
+    out.input += parts.input || 0;
+    out.output += parts.output || 0;
+    out.cache_read += parts.cache_read || 0;
+    out.cache_creation += parts.cache_creation || 0;
   }
   out.total = out.input + out.output + out.cache_read + out.cache_creation;
   for (let key of Object.keys(out)) out[key] = _roundUsd(out[key]);
@@ -1628,6 +1690,7 @@ function buildProxyDayResult(key, d, isLatest) {
     cache_health: d.cache_health,
     models: d.models,
     estimated_cost: _estimatedCostBreakdown(d.models),
+    pricing: pricing.missesFor(key) || { basis: 'rate-cards', records: 0, models: {} },
     status_codes: d.status_codes,
     hours: d.hours,
     active_hours: Object.keys(d.hours).length,

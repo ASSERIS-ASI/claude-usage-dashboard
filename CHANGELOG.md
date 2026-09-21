@@ -5,6 +5,53 @@ documented here.
 
 ## Unreleased
 
+## [1.12.0] - 2026-09-21
+
+### Added
+
+- Added rate cards for Claude Fable 5.1 (cache reads at $0.25 per MTok),
+  Claude Mythos 5.1 and the served id claude-opus-4-0.
+- Added a quota attribution panel for the cache-fix add-on: per quota meter
+  (5h and 7d) it plots the account reading from the response headers, the
+  share claimed by requests through the proxy, and the unattributed rest used
+  by other surfaces on the same account. Until cache-fix records a numeric
+  per-request claim, the whole meter is shown as unattributed.
+
+### Fixed
+
+- Fixed request costs being computed from an undated per-family price table
+  while the rate cards only fed the chart: every record is now priced with the
+  card in force on its own day, per model id, so Opus 4 is no longer billed at
+  Opus 5 rates and Sonnet 5 keeps its introductory rate before September. The
+  family table remains the fallback, and each use of it is logged and reported
+  as `pricing_fallback`.
+- Fixed 1-hour cache writes being priced at the 5-minute rate; the write is
+  split by its recorded TTL tier.
+- Fixed dated model ids without a minor version, such as
+  claude-opus-4-20250514, resolving to no rate card.
+- Fixed the rate-history chart: it now preselects the models actually in use
+  instead of a hand-kept list, keeps its legend, axis name and card dates
+  apart, keeps the card bands visible whichever models are switched off, and
+  no longer cuts its tooltip off at the edge of the card.
+- Fixed the efficiency trend line being drawn on a hidden second axis with its
+  own scale, which made it read higher than the visible labels, and its axis
+  running below zero where the trend extrapolated.
+- Fixed cache-fix requests all landing in the unknown TTL tier: MeterRow v1
+  carries the tier as the 1h/5m split of the cache write, which is now read.
+  Turns without a cache write stay unknown.
+- Fixed the forensic session-signal and service-impact charts sitting on
+  different baselines when their descriptions wrap to different lengths.
+- Fixed the three Efficiency — Range charts sitting on different baselines,
+  and the cache-creation share axis running below 0 % and above 100 %.
+- Fixed the setup wizard running off small screens: the card now fits the
+  window, only the step content scrolls and the action buttons stay visible.
+
+### Changed
+
+- Setup sources are single rows that open downwards for their description
+  and paths; the log-source step shows the subagent switch beside each source
+  and lists the logs a scan will read.
+
 ## [1.11.0] - 2026-08-06
 
 ### Added

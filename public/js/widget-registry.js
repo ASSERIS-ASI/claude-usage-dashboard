@@ -468,6 +468,16 @@
             size: { cols: 1, minHeight: 300 },
             renderFn: 'renderProxy_cacheFixActivity'
           },
+          {
+            id: 'proxy-quota-attribution',
+            requires: ['quota'],
+            titleKey: 'proxyQuotaAttributionTitle',
+            type: 'line',
+            engine: 'echarts',
+            canvasId: 'c-proxy-quota-attribution',
+            size: { cols: 1, minHeight: 340 },
+            renderFn: 'renderProxy_quotaAttribution'
+          },
         ]
       },
 

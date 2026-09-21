@@ -16,6 +16,7 @@
  *   renderProxy_tokens / renderProxy_latency / renderProxy_hourly / renderProxy_models
  *   renderProxy_hourlyLatency / renderProxy_errorTrend / renderProxy_cacheTrend
  *   renderProxy_ttlHistory / renderProxy_trafficSources / renderProxy_clientCompare
+ *   renderProxy_cacheFixActivity / renderProxy_quotaAttribution   — cache-fix add-on
  *   renderProxyEfficiencyTrend(data)
  *   renderEfficiencyHistory(data, el)     — called by gateway cut-impact toggle
  *   buildEfficiencyData(proxyDays, mainDays)
@@ -245,6 +246,121 @@
         { type: 'value', name: 'Cache Read', axisLabel: { color: '#A0875E', fontSize: 10, formatter: function (value) { return fmt(value); } }, nameTextStyle: { color: '#A0875E' }, splitLine: { show: false } }
       ],
       series: series
+    }, true);
+  };
+
+  // ── Quota attribution (cache-fix add-on) ────────────────────────────────
+  // Per meter: what the account meter reads (all surfaces), what the proxy's
+  // own claims account for, and the rest. Add-on data: without cache-fix there
+  // is no quota_attribution and the box stays hidden.
+  function quotaAttributionPoints(attribution, meter, from, to) {
+    var points = attribution?.meters?.[meter]?.points || [];
+    return points.filter(function (point) {
+      var day = String(point.hour).slice(0, 10);
+      return (!from || day >= from) && (!to || day <= to);
+    });
+  }
+
+  function quotaAttributionSeries(points, gridIndex) {
+    function line(key, name, color, extra) {
+      return Object.assign({
+        name: name,
+        type: 'line',
+        xAxisIndex: gridIndex,
+        yAxisIndex: gridIndex,
+        showSymbol: false,
+        lineStyle: { width: 2, color: color },
+        itemStyle: { color: color },
+        data: points.map(function (point) {
+          return [point.hour, Math.round(point[key] * 1000) / 10];
+        })
+      }, extra || {});
+    }
+    return [
+      line('cumulative', t('proxyQuotaAttributionCumulative'), '#D4AF7F'),
+      line('attributed', t('proxyQuotaAttributionAttributed'), '#22c55e'),
+      line('unattributed', t('proxyQuotaAttributionUnattributed'), '#f87171', {
+        lineStyle: { width: 1.5, type: 'dashed', color: '#f87171' },
+        areaStyle: { color: 'rgba(248,113,113,.08)' }
+      })
+    ];
+  }
+
+  function quotaAttributionYAxis(gridIndex, name) {
+    return {
+      type: 'value',
+      gridIndex: gridIndex,
+      min: 0,
+      name: name,
+      nameTextStyle: { color: '#A0875E', fontSize: 10 },
+      axisLabel: { color: '#A0875E', fontSize: 10, formatter: '{value}%' },
+      splitLine: { lineStyle: { color: 'rgba(42,45,52,.5)' } }
+    };
+  }
+
+  window.renderProxy_quotaAttribution = function (sCtx) {
+    sCtx = sCtx || window.__dashboardState.getSectionCtx('proxy');
+    var box = document.getElementById('proxy-quota-attribution-box');
+    var el = document.getElementById('c-proxy-quota-attribution');
+    if (!box || !el) return;
+    var attribution = sCtx?.data?.proxy?.quota_attribution;
+    var days = sCtx?.data?.proxy?.proxy_days || [];
+    var from = days.length ? days[0].date : null;
+    var to = days.length ? days.at(-1).date : null;
+    var q5h = quotaAttributionPoints(attribution, 'q5h', from, to);
+    var q7d = quotaAttributionPoints(attribution, 'q7d', from, to);
+    var hasData = typeof echarts !== 'undefined' && (q5h.length > 0 || q7d.length > 0);
+    box.style.display = hasData ? '' : 'none';
+    if (!hasData) {
+      if (_proxyCharts.quotaAttribution) {
+        _proxyCharts.quotaAttribution.dispose();
+        _proxyCharts.quotaAttribution = null;
+      }
+      return;
+    }
+    var h3 = document.getElementById('proxy-quota-attribution-h3');
+    var blurb = document.getElementById('proxy-quota-attribution-blurb');
+    if (h3) h3.textContent = t('proxyQuotaAttributionTitle');
+    if (blurb) {
+      blurb.textContent = attribution.attribution_available
+        ? t('proxyQuotaAttributionBlurb')
+        : t('proxyQuotaAttributionBlurbNoClaim');
+    }
+    if (!_proxyCharts.quotaAttribution) {
+      _proxyCharts.quotaAttribution = echarts.init(el, null, { renderer: 'canvas' });
+    }
+    _proxyCharts.quotaAttribution.setOption({
+      animation: false,
+      legend: {
+        data: [
+          t('proxyQuotaAttributionCumulative'),
+          t('proxyQuotaAttributionAttributed'),
+          t('proxyQuotaAttributionUnattributed')
+        ],
+        textStyle: { color: '#EFE7D6', fontSize: 10 },
+        top: 2
+      },
+      tooltip: {
+        trigger: 'axis',
+        backgroundColor: 'rgba(14,17,22,.96)',
+        borderColor: '#2A2D34',
+        textStyle: { color: '#F7F3EC', fontSize: 12 },
+        valueFormatter: function (value) { return value + '%'; }
+      },
+      axisPointer: { link: [{ xAxisIndex: 'all' }] },
+      grid: [
+        { left: 52, right: 20, top: 38, height: '34%' },
+        { left: 52, right: 20, top: '60%', bottom: 28 }
+      ],
+      xAxis: [
+        { type: 'time', gridIndex: 0, axisLabel: { show: false }, splitLine: { show: false } },
+        { type: 'time', gridIndex: 1, axisLabel: { color: '#A0875E', fontSize: 10 }, splitLine: { show: false } }
+      ],
+      yAxis: [
+        quotaAttributionYAxis(0, t('proxyQuotaAttributionMeter5h')),
+        quotaAttributionYAxis(1, t('proxyQuotaAttributionMeter7d'))
+      ],
+      series: quotaAttributionSeries(q5h, 0).concat(quotaAttributionSeries(q7d, 1))
     }, true);
   };
 
@@ -1246,6 +1362,7 @@
     renderProxyCacheTrend(data);
     if (typeof window.renderProxy_ttlHistory === 'function') window.renderProxy_ttlHistory();
     if (typeof window.renderProxy_cacheFixActivity === 'function') window.renderProxy_cacheFixActivity();
+    if (typeof window.renderProxy_quotaAttribution === 'function') window.renderProxy_quotaAttribution();
     renderProxyEfficiencyTrend(data);
     var h3hl = document.getElementById("proxy-hourly-latency-h3");
     if (h3hl) h3hl.textContent = t("proxyHourlyLatencyTitle");

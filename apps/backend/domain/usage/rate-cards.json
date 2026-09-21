@@ -356,6 +356,45 @@
           }
         }
       }
+    },
+    {
+      "id": "2026-09-20-published",
+      "valid_from": "2026-09-20",
+      "source": "Anthropic published pricing page",
+      "source_url": "https://platform.claude.com/docs/en/docs/about-claude/pricing",
+      "recorded_at": "2026-09-20",
+      "confidence": "published",
+      "note": "Fills three gaps the family-substring pricing hid. Claude Fable 5.1 and Claude Mythos 5.1 ship in the same tier as Claude Fable 5 at 10/50, but Fable 5.1 reads cache at 0.25 per MTok (0.025x base input instead of the 0.1x every other model charges) - costed at the Fable 5 rate a cached prefix bills four times over. Whether Mythos 5.1 shares that discount was not published at launch, so it carries the older 1.0 rate: the higher of the two, because a cost view may not invent a saving. When the rate is published this is corrected by appending a card, never by editing this one. claude-opus-4-0 is the id the API actually serves for Opus 4 - the bare claude-opus-4 key alone never matched a served record.",
+      "inherits": "2026-09-01-sonnet-5-standard",
+      "models": {
+        "claude-fable-5-1": {
+          "standard": {
+            "input": 10,
+            "output": 50,
+            "cache_write_5m": 12.5,
+            "cache_write_1h": 20,
+            "cache_read": 0.25
+          }
+        },
+        "claude-mythos-5-1": {
+          "standard": {
+            "input": 10,
+            "output": 50,
+            "cache_write_5m": 12.5,
+            "cache_write_1h": 20,
+            "cache_read": 1
+          }
+        },
+        "claude-opus-4-0": {
+          "standard": {
+            "input": 15,
+            "output": 75,
+            "cache_write_5m": 18.75,
+            "cache_write_1h": 30,
+            "cache_read": 1.5
+          }
+        }
+      }
     }
   ],
   "plans": {

@@ -984,6 +984,29 @@
   var __rateCards = null;
 
   /**
+   * The models this installation actually used, as rate-card names.
+   *
+   * Usage records a model per call and keeps the dated build in the name —
+   * claude-haiku-4-5-20251001 — while a rate card is published for the model
+   * itself. The date suffix is dropped so the two meet.
+   */
+  /** Series that carries the rate-card bands; kept out of the legend. */
+  var RATE_CARD_BANDS = '__rate_card_bands';
+
+  function modelsInUse() {
+    var used = {};
+    var days = window.__dashboardState?.getData?.()?.days || [];
+    for (var day of days) {
+      var perModel = day?.models;
+      if (!perModel || typeof perModel !== 'object') continue;
+      for (var name of Object.keys(perModel)) {
+        used[String(name).replace(/-\d{8}$/, '')] = true;
+      }
+    }
+    return used;
+  }
+
+  /**
    * Published token prices over time, one step line per model, with a band at
    * every date a new rate card took effect. Prices change on announced dates,
    * so the interesting part is not the current number but when it moved and
@@ -1005,9 +1028,14 @@
     }
 
     var today = new Date().toISOString().slice(0, 10);
-    var current = ['claude-opus-5', 'claude-sonnet-5', 'claude-haiku-4-5', 'claude-fable-5'];
+    // Only the models this installation used start visible; the rest is one
+    // legend click away. Read from the usage data rather than a hand-kept list,
+    // which switched on models never used and missed ones that were. With no
+    // usage to go by, every model starts visible rather than none.
     var selected = {};
-    for (var model of models) selected[model] = current.indexOf(model) !== -1;
+    var inUse = modelsInUse();
+    var anyMatch = models.some(function (name) { return inUse[name]; });
+    for (var model of models) selected[model] = anyMatch ? !!inUse[model] : true;
 
     var series = models.map(function (model, index) {
       var points = history[model].map(function (point) {
@@ -1030,28 +1058,45 @@
     });
 
     // The bands mark the effective dates themselves, so a jump is read as an
-    // event rather than as a coincidence of the line.
-    series[0].markLine = {
+    // event rather than as a coincidence of the line. They live on a series of
+    // their own that is not in the legend: attached to the first model, they
+    // vanished whenever that model was switched off.
+    series.push({
+      name: RATE_CARD_BANDS,
+      type: 'line',
+      data: [],
       silent: true,
-      symbol: 'none',
-      lineStyle: { color: 'rgba(212,175,127,.35)', type: 'dashed' },
-      label: {
-        color: '#A0875E', fontSize: 10, formatter: function (item) { return item.name; }
-      },
-      data: changes.map(function (change) {
-        return { xAxis: change.valid_from, name: change.valid_from };
-      })
-    };
+      tooltip: { show: false },
+      markLine: {
+        silent: true,
+        symbol: 'none',
+        lineStyle: { color: 'rgba(212,175,127,.35)', type: 'dashed' },
+        label: {
+          color: '#A0875E', fontSize: 10, formatter: function (item) { return item.name; }
+        },
+        data: changes.map(function (change) {
+          return { xAxis: change.valid_from, name: change.valid_from };
+        })
+      }
+    });
 
     if (!__rateChart) __rateChart = echarts.init(el, null, { renderer: 'canvas' });
     __rateChart.setOption({
       animation: false,
-      grid: { left: 56, right: 24, top: 40, bottom: 28 },
+      // Legend, band dates and plot each get their own row; the axis name sits
+      // beside the axis. Sharing the top 40 px, all three were written over
+      // each other.
+      grid: { left: 64, right: 24, top: 64, bottom: 28 },
       legend: {
-        type: 'scroll', top: 2, textStyle: { color: '#B9B0A1', fontSize: 10 }, selected: selected
+        type: 'scroll', top: 2, textStyle: { color: '#B9B0A1', fontSize: 10 }, selected: selected,
+        data: models
       },
       tooltip: {
         trigger: 'axis',
+        // One row per model is taller than the chart; inside the chart box the
+        // list was cut off by the card's overflow. Attached to the body it is
+        // not clipped by any container.
+        appendToBody: true,
         backgroundColor: 'rgba(14,17,22,.95)', borderColor: '#2A2D34',
         textStyle: { color: '#F7F3EC', fontSize: 11 },
         valueFormatter: function (value) { return '$' + value + ' / MTok'; }
@@ -1064,6 +1109,8 @@
       yAxis: {
         type: 'value',
         name: t('cfRateHistoryInput') + ' $/MTok',
+        nameLocation: 'middle',
+        nameGap: 44,
         nameTextStyle: { color: '#8C6A3F', fontSize: 10 },
         axisLabel: { color: '#8C6A3F', fontSize: 10, formatter: '${value}' },
         splitLine: { lineStyle: { color: '#1A1D24' } }

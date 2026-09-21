@@ -30,6 +30,7 @@
       missingLanguage: 'Bitte eine Sprache auswählen.',
       missingPlan: 'Bitte ein Abo auswählen.',
       setupFailed: 'Setup fehlgeschlagen',
+      details: 'Details',
       footerLicense: 'Apache-Lizenz 2.0 · quelloffen',
       footerTrademark: 'ASSERIS, das ASSERIS-Wortzeichen und das Drei-Knoten-Logo sind eingetragene Marken der ASSERIS AISBL.'
     },
@@ -62,6 +63,7 @@
       missingLanguage: 'Select a language.',
       missingPlan: 'Select a plan.',
       setupFailed: 'Setup failed',
+      details: 'Details',
       footerLicense: 'Apache License 2.0 · open source',
       footerTrademark: 'ASSERIS, the ASSERIS wordmark and the three-node logo are registered trademarks of ASSERIS AISBL.'
     },
@@ -94,6 +96,7 @@
       missingLanguage: '언어를 선택하십시오.',
       missingPlan: '요금제를 선택하십시오.',
       setupFailed: '설정 실패',
+      details: '세부 정보',
       footerLicense: 'Apache License 2.0 · 오픈 소스',
       footerTrademark: 'ASSERIS, ASSERIS 워드마크 및 3노드 로고는 ASSERIS AISBL의 등록 상표입니다.'
     }
@@ -103,6 +106,73 @@
     return String(value == null ? '' : value)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;')
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function pathField(caption, id, value) {
+    return '<label class="product-setup-path">' + caption +
+      '<input id="' + id + '" value="' + esc(value) + '">' +
+    '</label>';
+  }
+
+  // A source is a single line: checkbox, name, badge, detection status and a chevron.
+  // Description and path fields live in a box below the line that opens on click.
+  // The base source cannot be switched off, so its checkbox stays ticked and disabled.
+  function sourceRow(source, name, badge, description, detection, paths, c) {
+    var base = source === 'claude_jsonl';
+    var pathBlock = paths
+      ? '<div class="product-setup-source-paths" data-source-paths="' + source + '">' + paths + '</div>'
+      : '';
+    var body = base ? '' : '<div class="product-setup-source-body"><p>' + description + '</p>' + pathBlock + '</div>';
+    return '<div class="product-setup-source' + (base ? ' is-selected is-required' : '') + '"' +
+        (base ? '' : ' data-source-card="' + source + '"') + '>' +
+      '<div class="product-setup-row">' +
+        '<label class="product-setup-row-name"><input type="checkbox"' +
+          (base ? ' checked disabled' : ' class="product-setup-source-toggle" data-source="' + source + '"') + '>' +
+          '<strong>' + name + '</strong></label>' +
+        '<small>' + badge + '</small>' +
+        (detection ? '<em>' + detection + '</em>' : '<em></em>') +
+        (base ? '' : '<button type="button" class="product-setup-expand" aria-expanded="false" aria-label="' + c.details + ': ' + name + '"></button>') +
+      '</div>' +
+      body +
+    '</div>';
+  }
+
+  // Clicking a row opens its box downwards; the checkboxes in it only (de)select.
+  function bindExpandableRow(row) {
+    var toggle = row.querySelector('.product-setup-expand');
+    if (!toggle) return;
+    row.querySelector('.product-setup-row').addEventListener('click', function (event) {
+      if (event.target.closest('label')) return;
+      var open = !row.classList.contains('is-open');
+      row.classList.toggle('is-open', open);
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+  }
+
+  function bindExpandableRows(scope) {
+    scope.querySelectorAll('.product-setup-source').forEach(bindExpandableRow);
+  }
+
+  function formatSize(bytes) {
+    if (!Number.isFinite(bytes) || bytes <= 0) return '';
+    if (bytes < 1024 * 1024) return Math.max(1, Math.round(bytes / 1024)) + ' KB';
+    return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+  }
+
+  function fileListItem(file) {
+    return '<li' + (file.isSubagent ? ' class="is-sub"' : '') + ' title="' + esc(file.absPath || file.path) + '">' +
+      '<span><bdi>' + esc(file.path) + '</bdi></span><small>' + formatSize(file.size) + '</small></li>';
+  }
+
+  // The open box lists exactly the logs the scan will read for that source.
+  function renderFileLists(inventory, includeSubagents) {
+    for (var row of document.querySelectorAll('#product-setup-inventory [data-root]')) {
+      var root = row.dataset.root;
+      var files = (inventory.files || []).filter(function (file) {
+        return file.root === root && (includeSubagents || !file.isSubagent);
+      });
+      row.querySelector('.product-setup-files').innerHTML = files.map(fileListItem).join('');
+    }
   }
 
   function showSetup(status, requestedLanguage, preserved) {
@@ -143,50 +213,17 @@
             '<label><input type="radio" name="product-plan" value="api"' + (preserved.plan === 'api' ? ' checked' : '') + '> API</label>' +
           '</fieldset>' +
           '<div class="product-setup-options">' +
-            '<label class="product-setup-option is-selected is-required">' +
-              '<span class="product-setup-option-head"><input type="checkbox" checked disabled>' +
-                '<strong>Claude JSONL</strong><small>' + c.baseSource + '</small></span>' +
-              '<span>' + c.localDescription + '</span>' +
-            '</label>' +
-            '<label class="product-setup-option" data-source-card="cache_fix">' +
-              '<span class="product-setup-option-head"><input type="checkbox" class="product-setup-source-toggle" data-source="cache_fix"' +
-                (selectedSources.cache_fix ? ' checked' : '') + '>' +
-                '<strong>Claude Cache Fix</strong><small>' + c.additionalService + '</small></span>' +
-              '<span>' + c.cacheFixDescription + '</span>' +
-              '<em>usage.jsonl ' + (status.cache_fix_detected ? c.detected : c.notFound) + '</em>' +
-            '</label>' +
-            '<label class="product-setup-option" data-source-card="meter">' +
-              '<span class="product-setup-option-head"><input type="checkbox" class="product-setup-source-toggle" data-source="meter"' +
-                (selectedSources.meter ? ' checked' : '') + '>' +
-                '<strong>Claude Code Meter</strong><small>' + c.additionalService + '</small></span>' +
-              '<span>' + c.meterDescription + '</span>' +
-              '<em>claude-meter.jsonl ' + (status.meter_detected ? c.detected : c.notFound) + '</em>' +
-            '</label>' +
-            '<label class="product-setup-option" data-source-card="request_ndjson">' +
-              '<span class="product-setup-option-head"><input type="checkbox" class="product-setup-source-toggle" data-source="request_ndjson"' +
-                (selectedSources.request_ndjson ? ' checked' : '') + '>' +
-                '<strong>Request NDJSON</strong><small>' + c.additionalService + '</small></span>' +
-              '<span>' + c.requestNdjsonDescription + '</span>' +
-              '<em>NDJSON ' + (status.request_ndjson_detected ? c.detected : c.notFound) + '</em>' +
-            '</label>' +
-          '</div>' +
-          '<div class="product-setup-source-paths" data-source-paths="cache_fix"' + (selectedSources.cache_fix ? '' : ' hidden') + '>' +
-            '<label class="product-setup-path">Cache-Fix usage.jsonl' +
-              '<input id="product-setup-cache-path" value="' + esc(preserved.cacheFixUsage || status.cache_fix_usage) + '">' +
-            '</label>' +
-            '<label class="product-setup-path">Cache-Fix debug log' +
-              '<input id="product-setup-cache-debug-path" value="' + esc(preserved.cacheFixDebug || status.cache_fix_debug) + '">' +
-            '</label>' +
-          '</div>' +
-          '<div class="product-setup-source-paths" data-source-paths="meter"' + (selectedSources.meter ? '' : ' hidden') + '>' +
-            '<label class="product-setup-path">Claude Meter claude-meter.jsonl' +
-              '<input id="product-setup-meter-path" value="' + esc(preserved.meterUsage || status.meter_usage) + '">' +
-            '</label>' +
-          '</div>' +
-          '<div class="product-setup-source-paths" data-source-paths="request_ndjson"' + (selectedSources.request_ndjson ? '' : ' hidden') + '>' +
-            '<label class="product-setup-path">Request NDJSON directory' +
-              '<input id="product-setup-request-path" value="' + esc(preserved.requestLogDir || status.request_log_dir) + '">' +
-            '</label>' +
+            sourceRow('claude_jsonl', 'Claude JSONL', c.baseSource, c.localDescription, '', '', c) +
+            sourceRow('cache_fix', 'Claude Cache Fix', c.additionalService, c.cacheFixDescription,
+              'usage.jsonl ' + (status.cache_fix_detected ? c.detected : c.notFound),
+              pathField('Cache-Fix usage.jsonl', 'product-setup-cache-path', preserved.cacheFixUsage || status.cache_fix_usage) +
+              pathField('Cache-Fix debug log', 'product-setup-cache-debug-path', preserved.cacheFixDebug || status.cache_fix_debug), c) +
+            sourceRow('meter', 'Claude Code Meter', c.additionalService, c.meterDescription,
+              'claude-meter.jsonl ' + (status.meter_detected ? c.detected : c.notFound),
+              pathField('Claude Meter claude-meter.jsonl', 'product-setup-meter-path', preserved.meterUsage || status.meter_usage), c) +
+            sourceRow('request_ndjson', 'Request NDJSON', c.additionalService, c.requestNdjsonDescription,
+              'NDJSON ' + (status.request_ndjson_detected ? c.detected : c.notFound),
+              pathField('Request NDJSON directory', 'product-setup-request-path', preserved.requestLogDir || status.request_log_dir), c) +
           '</div>' +
           '<div class="product-setup-actions"><span></span><button type="button" id="product-setup-next">' + c.next + '</button></div>' +
         '</div>' +
@@ -194,7 +231,6 @@
           '<h1>' + c.logSources + '</h1>' +
           '<p class="product-setup-lead">' + c.sourceLead + '</p>' +
           '<div id="product-setup-inventory" class="product-setup-inventory">' + c.discovering + '</div>' +
-          '<label class="product-setup-subagents"><input type="checkbox" id="product-setup-subagents"> ' + c.includeSubagents + '</label>' +
           '<div class="product-setup-extra"><input id="product-setup-extra-root" placeholder="' + c.extraPlaceholder + '"><button type="button" id="product-setup-extra-add">' + c.add + '</button></div>' +
           '<div id="product-setup-extra-list"></div>' +
           '<div class="product-setup-actions"><button type="button" id="product-setup-back">' + c.back + '</button><button type="button" id="product-setup-finish">' + c.finish + '</button></div>' +
@@ -209,6 +245,7 @@
     document.body.appendChild(overlay);
 
     var inventory = null;
+    var includeSubagents = false;
     var extraRoots = [];
     var errorEl = document.getElementById('product-setup-error');
     refreshSourceState();
@@ -247,6 +284,8 @@
       });
     });
 
+    bindExpandableRows(overlay.querySelector('.product-setup-options'));
+
     function renderInventory() {
       var host = document.getElementById('product-setup-inventory');
       if (!inventory) return;
@@ -254,13 +293,36 @@
       for (var file of inventory.files || []) {
         if (file.isSubagent) subCountByRoot[file.root] = (subCountByRoot[file.root] || 0) + 1;
       }
-      host.innerHTML = (inventory.roots || []).map(function (root, index) {
+      host.innerHTML = (inventory.roots || []).map(function (root) {
         var subCount = subCountByRoot[root.label] || 0;
-        return '<label class="product-setup-root">' +
-          '<input type="checkbox" class="product-setup-root-cb" value="' + esc(root.path) + '" checked> ' +
-          '<strong>' + esc(root.label) + '</strong><span>' + root.fileCount + ' ' + c.logs +
-          (subCount ? ' · ' + subCount + ' ' + c.subagents : '') + '</span></label>';
+        return '<div class="product-setup-source is-selected" data-root="' + esc(root.label) + '">' +
+          '<div class="product-setup-row">' +
+            '<label class="product-setup-row-name"><input type="checkbox" class="product-setup-root-cb" value="' +
+              esc(root.path) + '" checked><strong>' + esc(root.label) + '</strong></label>' +
+            '<label class="product-setup-row-sub"><input type="checkbox" class="product-setup-subagents-cb"' +
+              (includeSubagents ? ' checked' : '') + '>' + c.subagents + '</label>' +
+            '<em>' + root.fileCount + ' ' + c.logs + (subCount ? ' · ' + subCount + ' ' + c.subagents : '') + '</em>' +
+            '<button type="button" class="product-setup-expand" aria-expanded="false" aria-label="' +
+              c.details + ': ' + esc(root.label) + '"></button>' +
+          '</div>' +
+          '<div class="product-setup-source-body"><ul class="product-setup-files"></ul></div>' +
+        '</div>';
       }).join('') || '<p>' + c.noDefault + '</p>';
+      // One delegated listener for every checkbox in the list.
+      host.addEventListener('change', function (event) {
+        var checkbox = event.target;
+        if (checkbox.classList.contains('product-setup-root-cb')) {
+          checkbox.closest('.product-setup-source').classList.toggle('is-selected', checkbox.checked);
+          return;
+        }
+        if (!checkbox.classList.contains('product-setup-subagents-cb')) return;
+        // One setting for the whole scan: every row shows and changes the same value.
+        includeSubagents = checkbox.checked;
+        for (var other of host.querySelectorAll('.product-setup-subagents-cb')) other.checked = includeSubagents;
+        renderFileLists(inventory, includeSubagents);
+      });
+      bindExpandableRows(host);
+      renderFileLists(inventory, includeSubagents);
     }
 
     function loadInventory() {
@@ -322,7 +384,7 @@
           meter_usage: document.getElementById('product-setup-meter-path').value.trim(),
           request_log_dir: document.getElementById('product-setup-request-path').value.trim(),
           log_roots: roots,
-          include_subagents: document.getElementById('product-setup-subagents').checked
+          include_subagents: includeSubagents
         })
       }).then(function (response) {
         return response.json().then(function (body) {

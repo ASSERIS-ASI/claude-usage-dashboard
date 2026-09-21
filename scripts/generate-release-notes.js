@@ -6,10 +6,30 @@
  *
  * This script writes the generated text to stdout. It does not create or
  * maintain a release-notes file in the repository.
+ *
+ * The body has two parts. Everything above the <!--INTERNAL--> marker is the
+ * public release text; the GitHub mirror cuts the body at that marker
+ * (.gitea/workflows/mirror-github.yml). Below it, and only in the Gitea
+ * release, are the commits that touch nothing but internal infrastructure —
+ * deployment manifests, forge workflows, the scrub itself. A commit that
+ * changes any product file stays public.
  */
 var childProcess = require('node:child_process');
 
 var TYPE_RE = /^(feat|fix|docs|perf|refactor|test|build|ci|chore)(?:\(([^)]*)\))?(!)?:\s*(.+)$/i;
+var INTERNAL_MARKER = '<!--INTERNAL-->';
+
+// Paths whose changes never concern a public reader. Kubernetes manifests are
+// shipped as examples, but a change to this installation's sizing or ingress
+// is not a product change.
+var INTERNAL_ONLY_RE = /^(?:\.gitea\/|Jenkinsfile$|k8s\/.+\.ya?ml$|sonar-project\.properties$|scripts\/scrub-for-public\.sh$)/;
+
+/** True when a commit changed files and every one of them is internal. */
+function isInternalOnly(commit) {
+  var files = Array.isArray(commit.files) ? commit.files : [];
+  return files.length > 0 && files.every(function (file) { return INTERNAL_ONLY_RE.test(file); });
+}
+
 var GROUPS = [
   { key: 'feat', title: 'Features' },
   { key: 'fix', title: 'Fixes' },
@@ -41,6 +61,21 @@ function normalizeCommit(commit) {
 }
 
 function generateNotes(tag, commits) {
+  var publicCommits = commits.filter(function (commit) { return !isInternalOnly(commit); });
+  var internalCommits = commits.filter(isInternalOnly);
+  var body = groupedNotes(tag, publicCommits);
+  if (!internalCommits.length) return body;
+  var lines = [body.trimEnd(), '', INTERNAL_MARKER, '', '### Internal', ''];
+  for (var commit of internalCommits) {
+    var entry = normalizeCommit(commit);
+    var prefix = entry.scope ? '**' + entry.scope + ':** ' : '';
+    var suffix = entry.shortSha ? ' (`' + entry.shortSha + '`)' : '';
+    lines.push('- ' + prefix + entry.description + suffix);
+  }
+  return lines.join('\n') + '\n';
+}
+
+function groupedNotes(tag, commits) {
   var grouped = new Map();
   for (var group of GROUPS) grouped.set(group.key, []);
 
@@ -71,16 +106,21 @@ function generateNotes(tag, commits) {
 
 function commitsInRange(baseTag, tag) {
   var range = baseTag ? baseTag + '..' + tag : tag;
+  // Record separator first, so the file list that --name-only prints after
+  // each header stays with its own commit.
   var output = gitOutput([
     'log',
     '--no-merges',
-    '--format=%H%x1f%s%x1e',
+    '--name-only',
+    '--format=%x1e%H%x1f%s',
     range
   ]);
   if (!output) return [];
-  return output.split('\x1e').map(function (record) {
-    var parts = record.trim().split('\x1f');
-    return { sha: parts[0], subject: parts.slice(1).join('\x1f') };
+  return output.split('\x1e').filter(Boolean).map(function (record) {
+    var lines = record.split('\n');
+    var parts = lines[0].trim().split('\x1f');
+    var files = lines.slice(1).map(function (line) { return line.trim(); }).filter(Boolean);
+    return { sha: parts[0], subject: parts.slice(1).join('\x1f'), files: files };
   }).filter(function (commit) {
     return commit.sha && commit.subject && !/^release:/i.test(commit.subject);
   });
@@ -101,5 +141,8 @@ if (require.main === module) main();
 
 module.exports = {
   generateNotes: generateNotes,
-  normalizeCommit: normalizeCommit
+  normalizeCommit: normalizeCommit,
+  isInternalOnly: isInternalOnly,
+  commitsInRange: commitsInRange,
+  INTERNAL_MARKER: INTERNAL_MARKER
 };

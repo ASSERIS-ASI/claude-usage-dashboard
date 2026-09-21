@@ -65,7 +65,7 @@
       'proxy-kpi-ttl-tier', 'proxy-kpi-peak-hours',
       'proxy-tokens', 'proxy-latency', 'proxy-hourly', 'proxy-models',
       'proxy-hourly-latency', 'proxy-error-trend', 'proxy-cache-trend',
-      'proxy-ttl-history', 'proxy-cache-fix-activity'
+      'proxy-ttl-history', 'proxy-cache-fix-activity', 'proxy-quota-attribution'
     ],
     'security-postures': [
       'sec-kpi-total', 'sec-kpi-critical', 'sec-kpi-high', 'sec-kpi-scrubbed',

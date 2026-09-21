@@ -98,3 +98,11 @@ test('marks rows without an organization hash as explicitly unassigned', functio
     'unassigned:meter'
   );
 });
+
+test('derives the TTL tier from where the cache write went', function () {
+  var base = { ts: '2026-09-20T10:00:00.000Z', model: 'claude-sonnet-5' };
+  assert.equal(adapter.translate(Object.assign({ ephemeral_1h_input_tokens: 5 }, base)).ttl_tier, '1h');
+  assert.equal(adapter.translate(Object.assign({ ephemeral_5m_input_tokens: 5 }, base)).ttl_tier, '5m');
+  assert.equal(adapter.translate(Object.assign({ cache_read_input_tokens: 900 }, base)).ttl_tier, null);
+  assert.equal(adapter.translate(Object.assign({ ttl_tier: '5m', ephemeral_1h_input_tokens: 5 }, base)).ttl_tier, '5m');
+});

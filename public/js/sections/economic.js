@@ -1520,7 +1520,11 @@
           type: "value",
           name: "%",
           axisLabel: { color: "#8C6A3F", formatter: function (v) { return v + "%"; } },
-          max: function (v) { return Math.max(v.max * 1.3, 1); },
+          // A creation share is 0–100 %. Fixed at zero, so the trend line's
+          // extrapolation cannot drag the axis below the baseline and out of
+          // line with the neighbouring charts.
+          min: 0,
+          max: function (v) { return Math.min(100, Math.max(Math.ceil(v.max * 1.15), 1)); },
           splitLine: { lineStyle: { color: "rgba(42,45,52,.2)" } }
         },
         series: [
@@ -1744,9 +1748,14 @@
       },
       grid: { top: 30, right: 20, bottom: 40, left: 60 },
       xAxis: { type: "category", data: xData, axisLabel: { color: "#8C6A3F", rotate: 45, fontSize: 10 }, splitLine: { lineStyle: { color: "rgba(42,45,52,.3)" } } },
+      // One axis: bars and trend show the same quantity in the same unit. The
+      // trend used to sit on a second, hidden axis with its own maximum
+      // (v.max * 1.8 against v.max * 1.2), so it was drawn higher than the
+      // visible labels said — a peak at 0.4 % read as 0.58 %.
       yAxis: [
-        { type: "value", name: "%", axisLabel: { color: "#8C6A3F" }, max: function (v) { return Math.max(v.max * 1.2, 1); }, splitLine: { lineStyle: { color: "rgba(42,45,52,.3)" } } },
-        { type: "value", show: false, max: function (v) { return Math.max(v.max * 1.8, 1); }, splitLine: { show: false }, position: "right" }
+        // min 0: output / total cannot be negative. The quadratic trend
+        // extrapolates below zero at the edges and would drag the axis there.
+        { type: "value", name: "%", min: 0, axisLabel: { color: "#8C6A3F" }, max: function (v) { return Math.max(v.max * 1.2, 1); }, splitLine: { lineStyle: { color: "rgba(42,45,52,.3)" } } }
       ],
       series: [
         {
@@ -1768,7 +1777,7 @@
         },
         (function () {
           var n = ratioData.length;
-          if (n < 2) return { name: "Trend", type: "line", yAxisIndex: 1, smooth: true, symbol: "none", data: ratioData, itemStyle: { color: "#A0875E" },
+          if (n < 2) return { name: "Trend", type: "line", yAxisIndex: 0, smooth: true, symbol: "none", data: ratioData, itemStyle: { color: "#A0875E" },
           lineStyle: { color: "#A0875E", width: 1.5 } };
           var s1 = 0, s2 = 0, s3 = 0, s4 = 0, sy = 0, s1y = 0, s2y = 0;
           for (var i = 0; i < n; i++) {
@@ -1789,7 +1798,7 @@
           return {
             name: "Trend",
             type: "line",
-            yAxisIndex: 1,
+            yAxisIndex: 0,
             smooth: true,
             symbol: "none",
             data: line,

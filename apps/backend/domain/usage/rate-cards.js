@@ -28,6 +28,40 @@ var storagePaths = require('./storage-paths');
 var BASELINE = require('./rate-cards.json');
 var APPENDED_FILE = 'rate-cards.ndjson';
 
+/** Path of the appended-card file. Named once so reader and seeder cannot drift. */
+function appendedFile() {
+  return path.join(storagePaths.stateDir(), APPENDED_FILE);
+}
+
+/**
+ * Identity of the appended file as far as the memo is concerned: modification
+ * time and size. The history is append-only, so a file that has neither grown
+ * nor been rewritten cannot hold a card that was not already read.
+ */
+function appendedStamp() {
+  try {
+    var stat = fs.statSync(appendedFile());
+    return stat.mtimeMs + ':' + stat.size;
+  } catch (error) {
+    if (error.code === 'ENOENT') return 'absent';
+    throw error;
+  }
+}
+
+/**
+ * Resolution memo. A cost path asks once per record, and without the memo
+ * every ask re-read the file from disk — tens of thousands of reads per parse
+ * of a file that changes a few times a year. Keyed on the file stamp, so an
+ * appended card still takes effect without a restart.
+ */
+var _memo = { stamp: null, cards: null, statAt: 0, cardAt: new Map(), rates: new Map() };
+
+/**
+ * How long a stamp is trusted before the file is asked again. A card appended
+ * at runtime takes effect a second later.
+ */
+var STAT_TTL_MS = 1000;
+
 /**
  * Read the appended file. An absent file means no cards were ever appended; a
  * file that cannot be read is a fault and is not disguised as an empty history,
@@ -53,7 +87,7 @@ function parseCard(line) {
 }
 
 function appendedCards() {
-  var file = path.join(storagePaths.stateDir(), APPENDED_FILE);
+  var file = appendedFile();
   var cards = [];
   for (var line of appendedText(file).split('\n')) {
     var trimmed = line.trim();
@@ -66,13 +100,24 @@ function appendedCards() {
 
 /** All cards, oldest first. Later cards with the same id replace earlier ones. */
 function allCards() {
+  var now = Date.now();
+  if (_memo.cards && now - _memo.statAt < STAT_TTL_MS) return _memo.cards;
+  var stamp = appendedStamp();
+  if (_memo.stamp === stamp && _memo.cards) {
+    _memo.statAt = now;
+    return _memo.cards;
+  }
   var byId = new Map();
   for (var card of BASELINE.cards.concat(appendedCards())) {
     byId.set(card.id || card.valid_from, card);
   }
-  return Array.from(byId.values()).sort(function (left, right) {
+  var sorted = Array.from(byId.values()).sort(function (left, right) {
     return String(left.valid_from).localeCompare(String(right.valid_from));
   });
+  // A fresh stamp drops the derived maps too, or a stale price would outlive
+  // the card that replaced it.
+  _memo = { stamp: stamp, cards: sorted, statAt: now, cardAt: new Map(), rates: new Map() };
+  return sorted;
 }
 
 function dayOf(value) {
@@ -95,20 +140,28 @@ function resolvedModels(card, cards) {
 function cardAt(date) {
   var day = dayOf(date);
   var cards = allCards();
+  if (_memo.cardAt.has(day)) return _memo.cardAt.get(day);
   var found = null;
   for (var card of cards) {
     if (!day || dayOf(card.valid_from) <= day) found = card;
   }
-  if (!found) return null;
-  return { ...found, models: resolvedModels(found, cards) };
+  var resolved = found ? { ...found, models: resolvedModels(found, cards) } : null;
+  _memo.cardAt.set(day, resolved);
+  return resolved;
 }
 
 /**
  * Normalise a served model name to a card key: dated ids lose their suffix
  * (claude-haiku-4-5-20251001), dotted names lose their dots (claude-opus-4.7).
+ *
+ * The date is stripped FIRST. A model without a minor version carries its date
+ * where a minor version would sit, so the pattern below read
+ * claude-opus-4-20250514 as major 4, minor 20250514 — a key no card matches,
+ * which left Opus 4 and Sonnet 4 unpriceable under their served ids. The chart
+ * strips the date the same way (modelsInUse in sections/cost-intelligence.js).
  */
 function modelKey(model) {
-  var name = String(model || '').toLowerCase().replaceAll('.', '-');
+  var name = String(model || '').toLowerCase().replaceAll('.', '-').replace(/-\d{8}$/, '');
   var match = /^(claude-[a-z]+-\d+(?:-\d+)?)/.exec(name);
   return match ? match[1] : name;
 }
@@ -129,6 +182,53 @@ function priceFor(model, tier, date) {
     tier: entry[tier] ? tier : 'standard',
     rates: rates
   };
+}
+
+/**
+ * The rate row a cost calculation uses for one record: the model as the card
+ * names it, on the record's own day.
+ *
+ * Every rate is carried under both spellings — cache_write_5m / cache_write_1h
+ * as the cards publish them, cache_creation / cache_creation_1h as the cost
+ * path names them — from one resolved row, so the two can never disagree.
+ * Frozen because it is memoised: a caller mutating a rate would corrupt every
+ * later computation.
+ *
+ * @returns {{rates:object, card_id:string, valid_from:string, confidence:string}|null}
+ *          null when no card covers the model on that day; the caller decides
+ *          what an unpriceable record means.
+ */
+function ratesFor(model, date) {
+  var day = dayOf(date);
+  // cardAt() answers an empty date with the NEWEST card — right for the chart,
+  // wrong for a cost figure: an undated record would be billed at today's
+  // prices. An undated record is unpriceable.
+  if (day.length !== 10) return null;
+  var key = day + '|' + modelKey(model);
+  allCards();
+  if (_memo.rates.has(key)) return _memo.rates.get(key);
+
+  var priced = priceFor(model, 'standard', day);
+  var resolved = null;
+  if (priced) {
+    var r = priced.rates;
+    resolved = Object.freeze({
+      rates: Object.freeze({
+        input: r.input,
+        output: r.output,
+        cache_read: r.cache_read,
+        cache_write_5m: r.cache_write_5m,
+        cache_write_1h: r.cache_write_1h,
+        cache_creation: r.cache_write_5m,
+        cache_creation_1h: r.cache_write_1h
+      }),
+      card_id: priced.card_id,
+      valid_from: priced.valid_from,
+      confidence: priced.confidence
+    });
+  }
+  _memo.rates.set(key, resolved);
+  return resolved;
 }
 
 /**
@@ -181,8 +281,13 @@ function changePoints() {
  * that happened before today. Existing lines are never rewritten — the file
  * only grows, and a card already present keeps the form it was recorded in.
  */
+/** Drop the memo. For tests, and for the seeder that just changed the file. */
+function invalidate() {
+  _memo = { stamp: null, cards: null, statAt: 0, cardAt: new Map(), rates: new Map() };
+}
+
 function seedStateHistory() {
-  var file = path.join(storagePaths.stateDir(), APPENDED_FILE);
+  var file = appendedFile();
   var known = new Set();
   for (var line of appendedText(file).split('\n')) {
     var trimmed = line.trim();
@@ -200,6 +305,7 @@ function seedStateHistory() {
     pending.map(function (card) { return JSON.stringify(card); }).join('\n') + '\n',
     'utf8'
   );
+  invalidate();
   return pending.length;
 }
 
@@ -209,6 +315,8 @@ module.exports = {
   cardAt: cardAt,
   modelKey: modelKey,
   priceFor: priceFor,
+  ratesFor: ratesFor,
+  invalidate: invalidate,
   history: history,
   changePoints: changePoints
 };

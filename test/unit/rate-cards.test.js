@@ -70,3 +70,21 @@ test('the history exposes one point per card and the change dates', function () 
 test('an unknown model yields no price instead of a guessed one', function () {
   assert.equal(rateCards.priceFor('gpt-4o', 'standard', '2026-08-06'), null);
 });
+
+test('strips the build date before reading a minor version', function () {
+  assert.equal(rateCards.modelKey('claude-opus-4-20250514'), 'claude-opus-4');
+  assert.equal(rateCards.modelKey('claude-haiku-4-5-20251001'), 'claude-haiku-4-5');
+  assert.equal(rateCards.modelKey('claude-opus-4.7'), 'claude-opus-4-7');
+});
+
+test('ratesFor prices a record on its own day and refuses undated records', function () {
+  assert.equal(rateCards.ratesFor('claude-opus-4-20250514', '2026-09-10').rates.input, 15);
+  assert.equal(rateCards.ratesFor('claude-sonnet-5', '2026-08-15').rates.input, 2);
+  assert.equal(rateCards.ratesFor('claude-sonnet-5', '2026-09-15').rates.input, 3);
+  assert.equal(rateCards.ratesFor('claude-sonnet-5', ''), null);
+  var fable = rateCards.ratesFor('claude-fable-5-1', '2026-09-21');
+  assert.equal(fable.card_id, '2026-09-20-published');
+  assert.equal(fable.rates.cache_read, 0.25);
+  assert.equal(fable.rates.cache_creation_1h, fable.rates.cache_write_1h);
+  assert.ok(Object.isFrozen(fable.rates));
+});

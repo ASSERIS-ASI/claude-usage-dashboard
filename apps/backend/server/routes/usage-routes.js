@@ -3,6 +3,10 @@
 var path = require('path');
 var URL = typeof globalThis.URL === 'function' ? globalThis.URL : require('url').URL;
 var quotaDivisor = require('../../domain/usage/quota-divisor');
+var pricing = require('../../domain/usage/pricing');
+
+/** The dated resolver, handed to the line processor so the domain module stays I/O-free. */
+var QD_PRICE_OF = { priceOf: function (model, day) { return pricing.ratesFor(model, day).rates; } };
 var addonAdapter = require('../../domain/addons/addon-adapter');
 var productSetupModel = require('../../app/product-setup');
 
@@ -265,8 +269,9 @@ function register(deps) {
     var proxyCache = getProxyCache();
     if (!proxyCache.data) refreshProxyCache();
 
-    // Per-model token pricing is resolved inside quota-divisor via response_model.
-    // PRICE here is only the FALLBACK for records whose model isn't recognized.
+    // Each record is priced with the rate card in force on its own day
+    // (QD_PRICE_OF). PRICE is only the last resort for a record no card and no
+    // model family covers.
     // This dashboard does NOT calculate real billing — absolute $ values are illustrative.
     // The ratios (CV, median, trend) are scale-invariant; only the Y-axis label changes.
     var PRICE = quotaDivisor.MODEL_PRICING.opus;
@@ -274,12 +279,14 @@ function register(deps) {
     // Re-parse proxy logs to get per-request q5 + full token data
     var proxyFiles = collectProxyNdjsonFiles();
     var requestPairs = []; // { date, ts, q5, q5_prev, delta, cost, tokens }
+    // Counted per request, so the number describes THIS answer.
+    pricing.resetMisses();
 
     for (var pf of proxyFiles) {
       var qfDate = path.basename(pf).replace('proxy-', '').replace('.ndjson', '');
       if (qdDate && qfDate !== qdDate) continue;
       try {
-        forEachJsonlLineSync(pf, createQuotaDivisorLineProcessor(PRICE, qfDate, requestPairs));
+        forEachJsonlLineSync(pf, createQuotaDivisorLineProcessor(PRICE, qfDate, requestPairs, QD_PRICE_OF));
       } catch (error) { logOptionalErr(error); }
     }
 
@@ -292,7 +299,7 @@ function register(deps) {
           if (qfDateCar !== prevYmd) continue;
           var prevPairsCar = [];
           try {
-            forEachJsonlLineSync(pfCar, createQuotaDivisorLineProcessor(PRICE, qfDateCar, prevPairsCar));
+            forEachJsonlLineSync(pfCar, createQuotaDivisorLineProcessor(PRICE, qfDateCar, prevPairsCar, QD_PRICE_OF));
           } catch (error) { logOptionalErr(error); }
           if (prevPairsCar.length) {
             var carSums = q5CarryoverTotalsFromPairs(prevPairsCar);
@@ -337,7 +344,11 @@ function register(deps) {
     var qdResult = {
       pricing: PRICE,
       pricing_per_model: quotaDivisor.MODEL_PRICING,
-      pricing_note: 'cost is resolved per response_model (pricing_per_model); records with an unrecognized model fall back to pricing (Opus).',
+      pricing_note: 'cost is resolved per response_model AND record date from the dated rate cards ' +
+        '(/api/rate-cards). pricing/pricing_per_model are the undated family fallback, used only where no ' +
+        'card covers the model on that day; pricing_fallback counts how often that happened.',
+      pricing_basis: 'rate-cards',
+      pricing_fallback: pricing.missTotals(),
       note: 'implied_divisor = API_cost / q5_delta. If constant, quota is a simple linear mapping of cost.',
       requested_date: qdDate || null,
       no_proxy_logs: !!(qdDate && requestPairs.length === 0),

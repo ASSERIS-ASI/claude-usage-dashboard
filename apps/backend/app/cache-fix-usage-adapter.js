@@ -83,6 +83,21 @@ function quota(entry, current, legacy) {
   return null;
 }
 
+/**
+ * The cache TTL tier of a record.
+ *
+ * MeterRow v1 has no ttl_tier field; the tier is carried by where the cache
+ * write went — ephemeral_1h_input_tokens or ephemeral_5m_input_tokens. A turn
+ * that wrote nothing to the cache shows no tier at all and stays unknown
+ * rather than being guessed. An explicit ttl_tier from a richer producer wins.
+ */
+function ttlTierOf(entry) {
+  if (entry.ttl_tier) return entry.ttl_tier;
+  if (Number(entry.ephemeral_1h_input_tokens) > 0) return '1h';
+  if (Number(entry.ephemeral_5m_input_tokens) > 0) return '5m';
+  return null;
+}
+
 function normalizeAccountKey(entry, source) {
   var raw = String(
     entry.org_id || entry.organization_id || entry.account_key || ''
@@ -173,7 +188,7 @@ function translate(entry, source) {
     account_key: normalizeAccountKey(entry, evidenceSource),
     ephemeral_1h_input_tokens: Number(entry.ephemeral_1h_input_tokens) || 0,
     ephemeral_5m_input_tokens: Number(entry.ephemeral_5m_input_tokens) || 0,
-    ttl_tier: entry.ttl_tier || null,
+    ttl_tier: ttlTierOf(entry),
     peak_hour: entry.peak_hour === true,
     source: evidenceSource,
     evidence_sources: [evidenceSource],
@@ -181,7 +196,10 @@ function translate(entry, source) {
     agent_id: entry.agent_id || null,
     agent_id_source: entry.agent_id_source || null,
     speed: entry.speed || null,
-    service_tier: entry.service_tier || null
+    service_tier: entry.service_tier || null,
+    // Kept verbatim for the attribution panel, which decides what counts as a
+    // claim; an empty string is carried as null, not as a zero.
+    quota_claim: entry.qclaim === '' || entry.qclaim == null ? null : entry.qclaim
   };
 }
 
@@ -233,7 +251,8 @@ function mergeTranslated(existing, incoming) {
     'agent_id',
     'agent_id_source',
     'speed',
-    'service_tier'
+    'service_tier',
+    'quota_claim'
   ];
   for (var field of fillFields) {
     var existingUnassigned = field === 'account_key' &&
