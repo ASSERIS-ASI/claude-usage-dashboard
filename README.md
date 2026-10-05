@@ -282,6 +282,74 @@ See [NOTICE](NOTICE), [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md),
 [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES) and
 [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## Run in the background with PM2 (Windows)
+
+From PowerShell in the repository directory, install PM2 globally:
+
+```powershell
+npm install -g pm2
+```
+
+Create a local `ecosystem.config.js` file in the repository directory with
+this content:
+
+```javascript
+module.exports = {
+  apps: [{
+    name: 'claude-usage-dashboard',
+    cwd: __dirname,
+    script: 'dashboard.js',
+    instances: 1,
+    exec_mode: 'fork',
+    windowsHide: true,
+    env: {
+      NODE_ENV: 'production'
+    }
+  }]
+};
+```
+
+Start the dashboard with the local configuration:
+
+```powershell
+pm2 start ecosystem.config.js
+```
+
+If the dashboard is already running with `npm start` or `node dashboard.js`,
+stop that process before starting it with PM2 to avoid a port conflict. PM2
+keeps the dashboard running after the terminal closes and restarts it if the
+process exits. The dashboard is configured as one forked process; it starts
+and manages its own worker processes.
+
+Use these commands to manage the dashboard:
+
+```powershell
+pm2 status
+pm2 logs claude-usage-dashboard
+pm2 stop claude-usage-dashboard
+pm2 restart claude-usage-dashboard
+pm2 delete claude-usage-dashboard
+```
+
+To apply changes to `ecosystem.config.js`, restart from the repository
+directory with `pm2 restart ecosystem.config.js --update-env`.
+
+PM2 does not automatically start its process list when Windows restarts. To
+configure PM2 as a Windows service, install the third-party
+`pm2-windows-service` utility from an elevated PowerShell session, then save
+the process list and run its service installer:
+
+```powershell
+npm install -g pm2-windows-service
+pm2 save
+pm2-service-install
+```
+
+Follow the installer prompts and verify the PM2 service in Windows Services.
+The service runs under its configured Windows account, so confirm that
+account can access the dashboard installation and Claude data. Run `pm2 save`
+again after changing the saved process list.
+
 ## License
 
 Copyright © 2026 ASSERIS AISBL and contributors. Licensed under the
